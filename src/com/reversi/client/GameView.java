@@ -56,7 +56,7 @@ public class GameView {
     // with each line having 8 characters ('.', 'B', 'W').
     public void updateBoard(String boardStr){
         SwingUtilities.invokeLater(() -> {
-            String[] lines = boardStr.split("\n");
+            String[] lines = boardStr.split("0");
             for (int i = 0; i < 8; i++){
                 String rowLine = lines[i];
                 for (int j = 0; j < 8; j++){
