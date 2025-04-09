@@ -1,18 +1,21 @@
 package com.reversi.server;
 
+import com.reversi.common.EventBus;
 import java.io.*;
 import java.net.*;
 
 public class ClientHandler extends Thread {
   private Socket socket;
-  private ServerMain server;
   private PrintWriter out;
   private BufferedReader in;
   private char playerColor; // 'B' or 'W'
+  private EventBus eventBus;
 
-  public ClientHandler(Socket s, ServerMain server) {
+  public ClientHandler(Socket s, EventBus eventBus) {
     this.socket = s;
-    this.server = server;
+    this.eventBus = eventBus;
+
+    // Establish in/out stream with client
     try {
       out = new PrintWriter(socket.getOutputStream(), true);
       in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -33,20 +36,7 @@ public class ClientHandler extends Thread {
       // Listen for incoming messages from the client.
       while ((line = in.readLine()) != null) {
         System.out.println("Received from player " + playerColor + ": " + line);
-        // Process a move command sent as "MOVE:row,col"
-        if (line.startsWith("MOVE:")) {
-          String[] parts = line.substring(5).split(",");
-          int row = Integer.parseInt(parts[0].trim());
-          int col = Integer.parseInt(parts[1].trim());
-          GameSession session = server.getGameSession();
-          boolean valid = session.makeMove(row, col, playerColor);
-          if (!valid) {
-            sendMessage("INVALID");
-          }
-          // Update both clients with the new board state.
-          session.updatePlayers();
-        }
-        // Additional commands (e.g., chat, disconnect) can be added here.
+        eventBus.post(new ClientMessage(line, this));
       }
     } catch (IOException e) {
       System.out.println("Connection with player " + playerColor + " lost.");
