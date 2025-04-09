@@ -5,8 +5,13 @@ import com.reversi.common.EventListener;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ServerMain implements EventListener<ClientMessage> {
+  private static final Logger logger =
+      LoggerFactory.getLogger(ServerMain.class);
+
   public static final int PORT = 5000;
   private List<ClientHandler> clients = new ArrayList<>();
   private EventBus eventBus = new EventBus();
@@ -19,21 +24,21 @@ public class ServerMain implements EventListener<ClientMessage> {
     eventBus.register(ClientMessage.class, this);
 
     try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-      System.out.println("Server started on port " + PORT);
+      logger.info("Server started on port {}", PORT);
+
       // Accept exactly two client connections for a single game session.
       while (clients.size() < 2) {
         Socket socket = serverSocket.accept();
         ClientHandler handler = new ClientHandler(socket, eventBus);
         clients.add(handler);
         handler.start();
-        System.out.println("Client connected. Total clients: " +
-                           clients.size());
+        logger.info("Client connected. Total clients: {}", clients.size());
       }
       // Once two clients are connected, start the game session.
       gameSession = new GameSession(clients.get(0), clients.get(1));
       gameSession.startGame();
     } catch (IOException e) {
-      e.printStackTrace();
+      logger.error("Error starting server", e);
     }
   }
 

@@ -2,8 +2,13 @@ package com.reversi.client;
 
 import java.io.*;
 import java.net.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GameController {
+  private static final Logger logger =
+      LoggerFactory.getLogger(GameController.class);
+
   private GameView view;
   private Socket socket;
   private PrintWriter out;
@@ -30,7 +35,8 @@ public class GameController {
     try {
       String line;
       while ((line = in.readLine()) != null) {
-        System.out.println("Received: " + line);
+        logger.info("Received: {}", line);
+
         if (line.startsWith("START:")) {
           playerColor = line.substring(6).trim();
           view.setPlayerColor(playerColor);
@@ -46,6 +52,7 @@ public class GameController {
         }
       }
     } catch (IOException e) {
+      logger.error("Error listening to server", e);
       e.printStackTrace();
     }
   }

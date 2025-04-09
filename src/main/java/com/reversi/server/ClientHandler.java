@@ -3,8 +3,13 @@ package com.reversi.server;
 import com.reversi.common.EventBus;
 import java.io.*;
 import java.net.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ClientHandler extends Thread {
+  private static final Logger logger =
+      LoggerFactory.getLogger(ClientHandler.class);
+
   private Socket socket;
   private PrintWriter out;
   private BufferedReader in;
@@ -20,7 +25,7 @@ public class ClientHandler extends Thread {
       out = new PrintWriter(socket.getOutputStream(), true);
       in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     } catch (IOException e) {
-      e.printStackTrace();
+      logger.error("Error initializing streams for player {}", playerColor, e);
     }
   }
 
@@ -35,15 +40,16 @@ public class ClientHandler extends Thread {
       String line;
       // Listen for incoming messages from the client.
       while ((line = in.readLine()) != null) {
-        System.out.println("Received from player " + playerColor + ": " + line);
+        logger.info("Received from player {}: {}", playerColor, line);
         eventBus.post(new ClientMessage(line, this));
       }
     } catch (IOException e) {
-      System.out.println("Connection with player " + playerColor + " lost.");
+      logger.error("Connection with player {} lost.", playerColor, e);
     } finally {
       try {
         socket.close();
       } catch (IOException e) {
+        logger.error("Error closing socket for player {}", playerColor, e);
       }
     }
   }
