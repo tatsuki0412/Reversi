@@ -1,15 +1,36 @@
 package com.reversi.client;
 
+import com.reversi.common.EventListener;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 
-public class GameView {
+public class GameView implements EventListener<ServerMessage> {
   private JFrame frame;
   private JButton[][] buttons = new JButton[8][8];
   private GameController controller;
   private JLabel statusLabel;
   private String playerColor;
+
+  @Override
+  public void onEvent(ServerMessage e) {
+    switch (e.getType()) {
+    case START:
+      this.playerColor = e.getMessage();
+      break;
+    case BOARD:
+      this.updateBoard(e.getMessage());
+      break;
+    case TURN:
+      this.updateTurn(e.getMessage());
+      break;
+    case INVALID:
+      String reason = e.getMessage(); // currently left empty
+      this.showInvalidMove();
+    default: // impossible
+      break;
+    }
+  }
 
   public void setController(GameController c) { controller = c; }
 
