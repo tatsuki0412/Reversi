@@ -3,8 +3,10 @@ package com.reversi.common;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.LocalTime;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -146,5 +148,73 @@ public class EventSystemTest {
     eventBus.post(new CustomEvent(LocalTime.now(), "whatever"));
     assertEquals(1, myListenerCnt.get());
     assertEquals(1, customListenerCnt.get());
+  }
+
+  @RepeatedTest(3)
+  public void testConcurrentPostingAndRegistrationStressTest()
+      throws InterruptedException {
+    // Setup
+    final int threadCount = 10;
+    final int postsPerThread = 1000;
+    EventBus eventBus = new EventBus();
+    AtomicInteger invocationCount = new AtomicInteger(0);
+
+    // Use a CountDownLatch to synchronize thread start.
+    CountDownLatch startLatch = new CountDownLatch(1);
+    CountDownLatch registrationLatch = new CountDownLatch(threadCount);
+    ExecutorService executor = Executors.newFixedThreadPool(threadCount * 2);
+
+    // Pre-register several listeners concurrently.
+    for (int i = 0; i < threadCount; i++) {
+      executor.submit(() -> {
+        try {
+          startLatch.await();
+          eventBus.register(CustomEvent.class,
+                            new EventListener<CustomEvent>() {
+                              @Override
+                              public void onEvent(CustomEvent event) {
+                                invocationCount.incrementAndGet();
+                              }
+                            });
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        } finally {
+          registrationLatch.countDown();
+        }
+      });
+    }
+
+    // Create tasks that post events concurrently
+    CountDownLatch postLatch = new CountDownLatch(threadCount);
+    for (int i = 0; i < threadCount; i++) {
+      executor.submit(() -> {
+        try {
+          registrationLatch.await();
+          for (int j = 0; j < postsPerThread; j++) {
+            eventBus.post(new CustomEvent(LocalTime.now(), "Stress Test"));
+          }
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        } finally {
+          postLatch.countDown();
+        }
+      });
+    }
+
+    // Release all threads to start concurrently.
+    startLatch.countDown();
+
+    // Wait for all posts to finish.
+    boolean postsCompleted = postLatch.await(10, TimeUnit.SECONDS);
+    executor.shutdownNow();
+    assertTrue(postsCompleted, "Not all posts completed in the expected time");
+
+    // With threadCount listeners and threadCount*postsPerThread posted events,
+    // the expected invocation count is threadCount * threadCount *
+    // postsPerThread.
+    int expectedCount = threadCount * threadCount * postsPerThread;
+    assertEquals(expectedCount, invocationCount.get(),
+                 "The total number of event invocations should match the "
+                     + "expected count.");
   }
 }

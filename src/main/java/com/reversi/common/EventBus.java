@@ -1,6 +1,8 @@
 package com.reversi.common;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * A simple generic event bus for registering and dispatching events.
@@ -9,7 +11,7 @@ public class EventBus {
 
   // Map event types to their registered listeners
   private Map<Class<? extends Event>, List<EventListener<? extends Event>>>
-      listeners = new HashMap<>();
+      listeners = new ConcurrentHashMap<>();
 
   /**
    * Registers a listener for a specific type of event.
@@ -20,7 +22,8 @@ public class EventBus {
    */
   public <T extends Event> EventBus register(Class<T> eventType,
                                              EventListener<T> listener) {
-    listeners.computeIfAbsent(eventType, k -> new ArrayList<>()).add(listener);
+    listeners.computeIfAbsent(eventType, k -> new CopyOnWriteArrayList<>())
+        .add(listener);
     return this;
   }
 
@@ -31,7 +34,7 @@ public class EventBus {
    * @param <T>   the type of the event
    */
   @SuppressWarnings("unchecked")
-  public <T extends Event> void post(T event) {
+  public <T extends Event> EventBus post(T event) {
     List<EventListener<? extends Event>> registeredListeners =
         listeners.get(event.getClass());
     if (registeredListeners != null) {
@@ -40,5 +43,7 @@ public class EventBus {
         ((EventListener<T>)listener).onEvent(event);
       }
     }
+
+    return this;
   }
 }
