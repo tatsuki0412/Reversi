@@ -16,7 +16,9 @@ public class ClientMain implements EventListener<ServerMessage> {
   private void start() {
     SwingUtilities.invokeLater(() -> {
       lobbyView.setController(controller);
-      eventBus.register(ServerMessage.class, lobbyView.getGameView());
+      GameView gameView = lobbyView.getGameView();
+      gameView.setController(controller);
+      eventBus.register(ServerMessage.class, gameView);
       eventBus.register(ServerMessage.class, this);
 
       controller.connectToServer();

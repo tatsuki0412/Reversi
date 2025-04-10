@@ -7,8 +7,12 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import javax.swing.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GameView implements EventListener<ServerMessage> {
+  private static final Logger logger = LoggerFactory.getLogger(GameView.class);
+
   private JPanel mainPanel;
   private JButton[][] buttons = new JButton[8][8];
   private GameController controller;
@@ -30,6 +34,8 @@ public class GameView implements EventListener<ServerMessage> {
           public void actionPerformed(ActionEvent e) {
             if (controller != null) {
               controller.sendMove(row, col);
+            } else {
+              logger.error("Game controller not set.");
             }
           }
         });
