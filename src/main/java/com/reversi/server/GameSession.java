@@ -1,11 +1,13 @@
 package com.reversi.server;
 
+import com.reversi.common.Board;
+import com.reversi.common.Message;
 import java.util.ArrayList;
 import java.util.List;
 
 public class GameSession {
   public static final int BOARD_SIZE = 8;
-  private char[][] board = new char[BOARD_SIZE][BOARD_SIZE];
+  private Board board;
   private ClientHandler blackPlayer;
   private ClientHandler whitePlayer;
   private char currentPlayer; // 'B' or 'W'
@@ -21,56 +23,41 @@ public class GameSession {
     p1.setPlayerColor('B');
     p2.setPlayerColor('W');
     currentPlayer = 'B';
-    initializeBoard();
+    board = Board.createDefault();
   }
 
-  private void initializeBoard() {
-    for (int i = 0; i < BOARD_SIZE; i++) {
-      for (int j = 0; j < BOARD_SIZE; j++) {
-        board[i][j] = '.';
-      }
-    }
-    board[3][3] = 'W';
-    board[3][4] = 'B';
-    board[4][3] = 'B';
-    board[4][4] = 'W';
+  private Board.Status convertPlayer(char player) {
+    return player == 'W' ? Board.Status.White : Board.Status.Black;
   }
-
-  // Convert board state into a string for transmission.
-  // Here we send 8 lines (rows) separated by newline characters.
-  public String boardToString() {
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < BOARD_SIZE; i++) {
-      for (int j = 0; j < BOARD_SIZE; j++) {
-        sb.append(board[i][j]);
-      }
-      sb.append("0");
-    }
-    return sb.toString();
+  private Board.Status getOpponent(Board.Status player) {
+    return player == Board.Status.Black ? Board.Status.White
+                                        : Board.Status.Black;
   }
 
   // Called by a ClientHandler to attempt a move.
   // This method is synchronized to prevent concurrent updates.
-  public synchronized boolean makeMove(int row, int col, char player) {
-    if (player != currentPlayer)
+  public synchronized boolean makeMove(int row, int col, char playerChar) {
+    if (playerChar != currentPlayer)
       return false; // Not this player's turn.
-    if (!isValidMove(row, col, player))
+    if (!isValidMove(row, col, playerChar))
       return false;
-    board[row][col] = player;
+
+    Board.Status player = convertPlayer(playerChar);
+    Board.Status opponent = getOpponent(player);
+
+    board.set(row, col, player);
     // For each direction, flip opponent discs if bracketing is valid.
     for (int[] d : DIRECTIONS) {
       List<int[]> discsToFlip = new ArrayList<>();
       int r = row + d[0], c = col + d[1];
-      char opponent = (player == 'B') ? 'W' : 'B';
-      while (isWithinBounds(r, c) && board[r][c] == opponent) {
+      while (isWithinBounds(r, c) && board.get(r, c) == opponent) {
         discsToFlip.add(new int[] {r, c});
         r += d[0];
         c += d[1];
       }
-      if (isWithinBounds(r, c) && board[r][c] == player) {
-        for (int[] pos : discsToFlip) {
-          board[pos[0]][pos[1]] = player;
-        }
+      if (isWithinBounds(r, c) && board.get(r, c) == player) {
+        for (int[] pos : discsToFlip)
+          board.set(pos[0], pos[1], player);
       }
     }
     // Switch turn.
@@ -83,21 +70,23 @@ public class GameSession {
   }
 
   // Validate whether placing a disc at (row, col) for player is legal.
-  public boolean isValidMove(int row, int col, char player) {
-    if (!isWithinBounds(row, col) || board[row][col] != '.')
+  public boolean isValidMove(int row, int col, char playerChar) {
+    Board.Status player = convertPlayer(playerChar);
+    Board.Status opponent = getOpponent(player);
+
+    if (!isWithinBounds(row, col) || board.get(row, col) != Board.Status.Empty)
       return false;
-    char opponent = (player == 'B') ? 'W' : 'B';
     for (int[] d : DIRECTIONS) {
       int r = row + d[0], c = col + d[1];
-      if (!isWithinBounds(r, c) || board[r][c] != opponent)
+      if (!isWithinBounds(r, c) || board.get(r, c) != opponent)
         continue;
       r += d[0];
       c += d[1];
       while (isWithinBounds(r, c)) {
-        if (board[r][c] == opponent) {
+        if (board.get(r, c) == opponent) {
           r += d[0];
           c += d[1];
-        } else if (board[r][c] == player) {
+        } else if (board.get(r, c) == player) {
           return true;
         } else {
           break;
@@ -111,23 +100,22 @@ public class GameSession {
   // state.
   public void startGame() {
     // Inform clients of their colors.
-    blackPlayer.sendMessage("START:B");
-    whitePlayer.sendMessage("START:W");
+    blackPlayer.sendMessage(new Message(new Message.Start('B')));
+    whitePlayer.sendMessage(new Message(new Message.Start('W')));
     updatePlayers();
   }
 
   // Sends the current board state and whose turn it is.
   public void updatePlayers() {
-    String boardStr = boardToString();
-    blackPlayer.sendMessage("BOARD:" + boardStr);
-    whitePlayer.sendMessage("BOARD:" + boardStr);
+    blackPlayer.sendMessage(new Message(new Message.BoardUpdate(board)));
+    whitePlayer.sendMessage(new Message(new Message.BoardUpdate(board)));
     // Indicate whose turn it is.
     if (currentPlayer == 'B') {
-      blackPlayer.sendMessage("TURN:YOUR");
-      whitePlayer.sendMessage("TURN:OPPONENT");
+      blackPlayer.sendMessage(new Message(new Message.Turn(true)));
+      whitePlayer.sendMessage(new Message(new Message.Turn(false)));
     } else {
-      whitePlayer.sendMessage("TURN:YOUR");
-      blackPlayer.sendMessage("TURN:OPPONENT");
+      blackPlayer.sendMessage(new Message(new Message.Turn(false)));
+      whitePlayer.sendMessage(new Message(new Message.Turn(true)));
     }
   }
 }

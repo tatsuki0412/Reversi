@@ -66,7 +66,8 @@ class MessageDeserializer extends JsonDeserializer<Message> {
       return new Message(start);
 
     case Board:
-      Message.Board board = mapper.treeToValue(msgNode, Message.Board.class);
+      Message.BoardUpdate board =
+          mapper.treeToValue(msgNode, Message.BoardUpdate.class);
       return new Message(board);
 
     default:
@@ -100,13 +101,13 @@ public class Message {
     public String getReason() { return reason; }
   }
 
-  public static class Board {
-    private final String str;
+  public static class BoardUpdate {
+    private final Board board;
     @JsonCreator
-    public Board(@JsonProperty("str") String s) {
-      this.str = s;
+    public BoardUpdate(@JsonProperty("board") Board b) {
+      this.board = b;
     }
-    public String getStr() { return this.str; }
+    public Board getBoard() { return this.board; }
   }
 
   public static class Start {
@@ -149,7 +150,7 @@ public class Message {
     this.msg = msg;
     this.type = Type.Turn;
   }
-  public Message(Board msg) {
+  public Message(BoardUpdate msg) {
     this.msg = msg;
     this.type = Type.Board;
   }

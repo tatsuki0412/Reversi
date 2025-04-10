@@ -1,8 +1,19 @@
 package com.reversi.common;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@JsonSerialize(using = Board.BoardSerializer.class)
+@JsonDeserialize(using = Board.BoardDeserializer.class)
 public class Board {
   private static final Logger logger = LoggerFactory.getLogger(Board.class);
 
@@ -114,5 +125,30 @@ public class Board {
     board.set(3, 4, Status.Black);
     board.set(4, 4, Status.Black);
     return board;
+  }
+
+  // Serialization support
+  public static class BoardSerializer extends JsonSerializer<Board> {
+    @Override
+    public void serialize(Board board, JsonGenerator gen,
+                          SerializerProvider serializers) throws IOException {
+      // Serialize the board by converting it to its string representation.
+      gen.writeString(board.toString());
+    }
+  }
+  public static class BoardDeserializer extends JsonDeserializer<Board> {
+    @Override
+    public Board deserialize(JsonParser p, DeserializationContext ctxt)
+        throws IOException {
+      // Expect the board to be represented as a single String value.
+      String boardStr = p.getValueAsString();
+      try {
+        return new Board(boardStr);
+      } catch (IllegalArgumentException e) {
+        // You might want to wrap or rethrow exceptions in a real application.
+        throw new IOException("Failed to deserialize Board: " + e.getMessage(),
+                              e);
+      }
+    }
   }
 }

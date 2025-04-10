@@ -2,6 +2,7 @@ package com.reversi.server;
 
 import com.reversi.common.EventBus;
 import com.reversi.common.EventListener;
+import com.reversi.common.Message;
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -46,21 +47,23 @@ public class ServerMain implements EventListener<ClientMessage> {
 
   @Override
   public void onEvent(ClientMessage e) {
-    String line = e.getMessage();
+    Message msg = e.getMessage();
     ClientHandler handler = e.getHandler();
 
-    if (line.startsWith("MOVE:")) {
-      String[] parts = line.substring(5).split(",");
-      int row = Integer.parseInt(parts[0].trim());
-      int col = Integer.parseInt(parts[1].trim());
-
-      boolean valid = gameSession.makeMove(row, col, handler.getPlayerColor());
+    switch (msg.getType()) {
+    case Move:
+      Message.Move move = (Message.Move)msg.getMessage();
+      boolean valid = gameSession.makeMove(move.getRow(), move.getCol(),
+                                           handler.getPlayerColor());
       if (!valid)
-        handler.sendMessage("INVALID");
-
-      // Update both clients with the new board state.
+        // handler.sendMessage("INVALID");
+        handler.sendMessage(new Message(new Message.Invalid("Invalid move")));
       gameSession.updatePlayers();
+      break;
+
+    default:
+      logger.warn("Message ignored: {}", msg.toString());
+      break;
     }
-    // Additional commands...
   }
 }

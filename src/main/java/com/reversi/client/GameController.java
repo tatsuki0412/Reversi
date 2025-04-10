@@ -1,6 +1,7 @@
 package com.reversi.client;
 
 import com.reversi.common.EventBus;
+import com.reversi.common.Message;
 import java.io.*;
 import java.net.*;
 import org.slf4j.Logger;
@@ -36,18 +37,30 @@ public class GameController {
       String line;
       while ((line = in.readLine()) != null) {
         logger.info("Received: {}", line);
-        eventBus.post(new ServerMessage(line));
+        eventBus.post(new ServerMessage(Message.deserialize(line)));
       }
     } catch (IOException e) {
       logger.error("Error listening to server", e);
-      e.printStackTrace();
+    } catch (Exception e) {
+      logger.error("Unknown error occured while processing data from server");
+    }
+  }
+
+  public void send(Message msg) {
+    if (out == null) {
+      logger.error("Output stream is null, message discarded: {}", msg);
+      return;
+    }
+
+    try {
+      out.println(msg.serialize());
+    } catch (Exception e) {
+      logger.error("Failed to send: {}", msg);
     }
   }
 
   // Called by the view when a cell is clicked.
   public void sendMove(int row, int col) {
-    if (out != null) {
-      out.println("MOVE:" + row + "," + col);
-    }
+    send(new Message(new Message.Move(row, col)));
   }
 }

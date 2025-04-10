@@ -1,6 +1,7 @@
 package com.reversi.server;
 
 import com.reversi.common.EventBus;
+import com.reversi.common.Message;
 import java.io.*;
 import java.net.*;
 import org.slf4j.Logger;
@@ -33,7 +34,13 @@ public class ClientHandler extends Thread {
 
   public char getPlayerColor() { return playerColor; }
 
-  public void sendMessage(String msg) { out.println(msg); }
+  public void sendMessage(Message msg) {
+    try {
+      out.println(msg.serialize());
+    } catch (Exception e) {
+      logger.error("Failed to send message: {}", msg.toString());
+    }
+  }
 
   public void run() {
     try {
@@ -41,7 +48,15 @@ public class ClientHandler extends Thread {
       // Listen for incoming messages from the client.
       while ((line = in.readLine()) != null) {
         logger.info("Received from player {}: {}", playerColor, line);
-        eventBus.post(new ClientMessage(line, this));
+
+        Message msg;
+        try {
+          msg = Message.deserialize(line);
+          eventBus.post(new ClientMessage(msg, this));
+        } catch (Exception e) {
+          logger.error("Failed to process reveived data: {}\n{}", line,
+                       e.getStackTrace());
+        }
       }
     } catch (IOException e) {
       logger.error("Connection with player {} lost.", playerColor, e);

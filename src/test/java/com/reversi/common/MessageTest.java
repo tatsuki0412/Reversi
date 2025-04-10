@@ -76,7 +76,7 @@ public class MessageTest {
 
   @Test
   void testSerializeDeserializeBoard() {
-    Message.Board board = new Message.Board("Board layout string");
+    Message.BoardUpdate board = new Message.BoardUpdate(Board.createDefault());
     Message msg = new Message(board);
 
     String json = assertDoesNotThrow(() -> msg.serialize());
@@ -86,8 +86,9 @@ public class MessageTest {
     assertEquals(Message.Type.Board, deserialized.getType(),
                  "Message type should be Board");
 
-    Message.Board boardDeserialized = (Message.Board)deserialized.getMessage();
-    assertEquals("Board layout string", boardDeserialized.getStr(),
+    Message.BoardUpdate boardDeserialized =
+        (Message.BoardUpdate)deserialized.getMessage();
+    assertEquals(Board.createDefault(), boardDeserialized.getBoard(),
                  "Board string does not match");
   }
 }

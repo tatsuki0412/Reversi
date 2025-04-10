@@ -1,43 +1,60 @@
 package com.reversi.client;
 
+import com.reversi.common.Board;
 import com.reversi.common.EventListener;
+import com.reversi.common.Message;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import sun.util.logging.resources.logging;
 
 public class GameView implements EventListener<ServerMessage> {
+  private static final Logger logger = LoggerFactory.getLogger(GameView.class);
+
   private JFrame frame;
   private JButton[][] buttons = new JButton[8][8];
   private GameController controller;
   private JLabel statusLabel;
-  private String playerColor;
+  private char playerColor;
 
   @Override
   public void onEvent(ServerMessage e) {
-    switch (e.getType()) {
-    case START:
-      this.playerColor = e.getMessage();
+    Message msg = e.getMessage();
+    switch (msg.getType()) {
+    case Start:
+      Message.Start start = (Message.Start)msg.getMessage();
+      this.playerColor = start.getColor();
       break;
-    case BOARD:
-      this.updateBoard(e.getMessage());
+
+    case Board:
+      Message.BoardUpdate boardupd = (Message.BoardUpdate)msg.getMessage();
+      this.updateBoard(boardupd.getBoard());
       break;
-    case TURN:
-      this.updateTurn(e.getMessage());
+
+    case Turn:
+      Message.Turn turn = (Message.Turn)msg.getMessage();
+      this.updateTurn(turn.getIsYours());
       break;
-    case INVALID:
-      String reason = e.getMessage(); // currently left empty
-      this.showInvalidMove();
-    default: // impossible
+
+    case Invalid:
+      Message.Invalid invalid = (Message.Invalid)msg.getMessage();
+      this.showInvalidMove(invalid.getReason());
+      break;
+
+    default:
+      logger.warn("Message ignored: {}", msg.toString());
       break;
     }
   }
 
   public void setController(GameController c) { controller = c; }
 
-  public void setPlayerColor(String color) {
+  public void setPlayerColor(char color) {
     playerColor = color;
     SwingUtilities.invokeLater(() -> {
-      statusLabel.setText("You are " + (color.equals("B") ? "Black" : "White"));
+      statusLabel.setText("You are " + ((color == 'B') ? "Black" : "White"));
     });
   }
 
@@ -70,38 +87,37 @@ public class GameView implements EventListener<ServerMessage> {
     frame.setVisible(true);
   }
 
-  // Update the board using the board string sent by the server.
-  // The string is expected to be 8 lines (rows) separated by newlines,
-  // with each line having 8 characters ('.', 'B', 'W').
-  public void updateBoard(String boardStr) {
+  public void updateBoard(Board board) {
     SwingUtilities.invokeLater(() -> {
-      String[] lines = boardStr.split("0");
-      for (int i = 0; i < 8; i++) {
-        String rowLine = lines[i];
+      for (int i = 0; i < 8; i++)
         for (int j = 0; j < 8; j++) {
-          char c = rowLine.charAt(j);
-          buttons[i][j].setText((c == '.') ? "" : String.valueOf(c));
+          String txt;
+          if (board.get(i, j) == Board.Status.Black)
+            txt = "B";
+          else if (board.get(i, j) == Board.Status.White)
+            txt = "W";
+          else
+            txt = "";
+          buttons[i][j].setText(txt);
         }
-      }
     });
   }
 
   // Update the status label to show whose turn it is.
-  public void updateTurn(String turnInfo) {
+  public void updateTurn(boolean isYours) {
     SwingUtilities.invokeLater(() -> {
-      if (turnInfo.equals("YOUR")) {
+      if (isYours) {
         statusLabel.setText("Your turn (" +
-                            (playerColor.equals("B") ? "Black" : "White") +
-                            ")");
+                            (playerColor == 'B' ? "Black" : "White") + ")");
       } else {
         statusLabel.setText("Opponent's turn");
       }
     });
   }
 
-  public void showInvalidMove() {
+  public void showInvalidMove(String displayMessage) {
     SwingUtilities.invokeLater(() -> {
-      JOptionPane.showMessageDialog(frame, "Invalid move!", "Error",
+      JOptionPane.showMessageDialog(frame, displayMessage, "Error",
                                     JOptionPane.ERROR_MESSAGE);
     });
   }

@@ -1,17 +1,18 @@
 package com.reversi.server;
 
 import com.reversi.common.Event;
+import com.reversi.common.Message;
 import java.time.LocalTime;
 
 public class ClientMessage implements Event {
-  LocalTime time;
-  String msg;
-  ClientHandler handler; // handler to which this event comes from
+  private final LocalTime time;
+  private final Message msg;
+  private final ClientHandler handler; // handler to which this event comes from
 
-  ClientMessage(String msg, ClientHandler handler) {
+  ClientMessage(Message msg, ClientHandler handler) {
     this(LocalTime.now(), msg, handler);
   }
-  ClientMessage(LocalTime time, String msg, ClientHandler handler) {
+  ClientMessage(LocalTime time, Message msg, ClientHandler handler) {
     this.time = time;
     this.msg = msg;
     this.handler = handler;
@@ -22,7 +23,7 @@ public class ClientMessage implements Event {
     return this.time;
   }
 
-  public String getMessage() { return this.msg; }
+  public Message getMessage() { return this.msg; }
 
   public ClientHandler getHandler() { return this.handler; }
 }
