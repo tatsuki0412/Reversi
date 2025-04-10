@@ -12,12 +12,12 @@ public class ServerMain implements EventListener<ClientMessage> {
   private static final Logger logger =
       LoggerFactory.getLogger(ServerMain.class);
 
+  public static void main(String[] args) { new ServerMain().startServer(); }
+
   public static final int PORT = 5000;
   private List<ClientHandler> clients = new ArrayList<>();
   private EventBus eventBus = new EventBus();
   private GameSession gameSession;
-
-  public static void main(String[] args) { new ServerMain().startServer(); }
 
   public void startServer() {
     // Setup event listener
