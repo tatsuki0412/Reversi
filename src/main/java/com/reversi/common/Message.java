@@ -88,6 +88,24 @@ class MessageDeserializer extends JsonDeserializer<Message> {
 @JsonDeserialize(using = MessageDeserializer.class)
 public class Message {
   // Nested message types for Client -> Server
+  public static class LobbyJoin {
+    private final String roomNumber;
+    @JsonCreator
+    public LobbyJoin(@JsonProperty("roomNumber") String roomNumber) {
+      this.roomNumber = roomNumber;
+    }
+    public String getRoomNumber() { return roomNumber; }
+  }
+
+  public static class LobbyReady {
+    private final boolean isReady;
+    @JsonCreator
+    public LobbyReady(@JsonProperty("isReady") boolean isReady) {
+      this.isReady = isReady;
+    }
+    public boolean getIsReady() { return isReady; }
+  }
+
   public static class Move {
     private final int row, col;
     @JsonCreator
@@ -134,21 +152,6 @@ public class Message {
       this.isYours = isYours;
     }
     public boolean getIsYours() { return isYours; }
-  }
-
-  // New message types for the lobby
-  public static class LobbyJoin {
-    private final String roomNumber;
-    @JsonCreator
-    public LobbyJoin(@JsonProperty("roomNumber") String roomNumber) {
-      this.roomNumber = roomNumber;
-    }
-    public String getRoomNumber() { return roomNumber; }
-  }
-
-  public static class LobbyReady {
-    @JsonCreator
-    public LobbyReady() {}
   }
 
   // Tagged union storage

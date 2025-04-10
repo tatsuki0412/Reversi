@@ -81,7 +81,7 @@ public class LobbyView {
     readyButton.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
-        controller.send(new Message(new Message.LobbyReady()));
+        controller.send(new Message(new Message.LobbyReady(true)));
         lobbyStatusLabel.setText("Ready. Waiting for opponent...");
         readyButton.setEnabled(false);
       }

@@ -2,7 +2,6 @@ package com.reversi.common;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.reversi.common.Message;
 import org.junit.jupiter.api.Test;
 
 public class MessageTest {
@@ -89,6 +88,44 @@ public class MessageTest {
     Message.BoardUpdate boardDeserialized =
         (Message.BoardUpdate)deserialized.getMessage();
     assertEquals(Board.createDefault(), boardDeserialized.getBoard(),
-                 "Board string does not match");
+                 "Board does not match");
+  }
+
+  @Test
+  void testSerializeDeserializeLobbyJoin() {
+    Message.LobbyJoin lobbyJoin = new Message.LobbyJoin("1234");
+    Message msg = new Message(lobbyJoin);
+
+    String json = assertDoesNotThrow(() -> msg.serialize());
+    assertNotNull(json, "Serialized JSON for LobbyJoin should not be null");
+
+    Message deserialized = assertDoesNotThrow(() -> Message.deserialize(json));
+    assertEquals(Message.Type.LobbyJoin, deserialized.getType(),
+                 "Message type should be LobbyJoin");
+
+    Message.LobbyJoin lobbyJoinDeserialized =
+        (Message.LobbyJoin)deserialized.getMessage();
+    assertEquals("1234", lobbyJoinDeserialized.getRoomNumber(),
+                 "Room number does not match");
+  }
+
+  @Test
+  void testSerializeDeserializeLobbyReady() {
+    Message.LobbyReady lobbyReady = new Message.LobbyReady(true);
+    Message msg = new Message(lobbyReady);
+
+    String json = assertDoesNotThrow(() -> msg.serialize());
+    assertNotNull(json, "Serialized JSON for LobbyReady should not be null");
+
+    Message deserialized = assertDoesNotThrow(() -> Message.deserialize(json));
+    assertEquals(Message.Type.LobbyReady, deserialized.getType(),
+                 "Message type should be LobbyReady");
+
+    // For LobbyReady there is no field to assert; testing successful
+    // deserialization is sufficient.
+    Message.LobbyReady lobbyReadyDeserialized =
+        (Message.LobbyReady)deserialized.getMessage();
+    assertEquals(true, lobbyReadyDeserialized.getIsReady(),
+                 "Ready status does not match");
   }
 }
