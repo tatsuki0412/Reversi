@@ -121,9 +121,9 @@ public class Board {
   public static Board createDefault() {
     Board board = new Board();
     board.set(3, 3, Status.White);
-    board.set(4, 3, Status.White);
+    board.set(4, 4, Status.White);
     board.set(3, 4, Status.Black);
-    board.set(4, 4, Status.Black);
+    board.set(4, 3, Status.Black);
     return board;
   }
 

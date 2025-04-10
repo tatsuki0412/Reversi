@@ -36,7 +36,6 @@ class MessageJsonUtil {
 }
 
 class MessageDeserializer extends JsonDeserializer<Message> {
-  // You can use a static ObjectMapper instance (or pass one via constructor).
   private static final ObjectMapper mapper = new ObjectMapper();
 
   @Override
@@ -70,6 +69,16 @@ class MessageDeserializer extends JsonDeserializer<Message> {
           mapper.treeToValue(msgNode, Message.BoardUpdate.class);
       return new Message(board);
 
+    case LobbyJoin:
+      Message.LobbyJoin lobbyJoin =
+          mapper.treeToValue(msgNode, Message.LobbyJoin.class);
+      return new Message(lobbyJoin);
+
+    case LobbyReady:
+      Message.LobbyReady lobbyReady =
+          mapper.treeToValue(msgNode, Message.LobbyReady.class);
+      return new Message(lobbyReady);
+
     default:
       throw new IllegalStateException("Unexpected type: " + typeStr);
     }
@@ -78,7 +87,25 @@ class MessageDeserializer extends JsonDeserializer<Message> {
 
 @JsonDeserialize(using = MessageDeserializer.class)
 public class Message {
-  // Nested message types (Client -> Server)
+  // Nested message types for Client -> Server
+  public static class LobbyJoin {
+    private final String roomNumber;
+    @JsonCreator
+    public LobbyJoin(@JsonProperty("roomNumber") String roomNumber) {
+      this.roomNumber = roomNumber;
+    }
+    public String getRoomNumber() { return roomNumber; }
+  }
+
+  public static class LobbyReady {
+    private final boolean isReady;
+    @JsonCreator
+    public LobbyReady(@JsonProperty("isReady") boolean isReady) {
+      this.isReady = isReady;
+    }
+    public boolean getIsReady() { return isReady; }
+  }
+
   public static class Move {
     private final int row, col;
     @JsonCreator
@@ -86,12 +113,11 @@ public class Message {
       this.row = row;
       this.col = col;
     }
-    // Optionally, you may remove the no-arg constructor if it's not needed.
     public int getRow() { return row; }
     public int getCol() { return col; }
   }
 
-  // Nested message types (Server -> Client)
+  // Nested message types for Server -> Client
   public static class Invalid {
     private final String reason;
     @JsonCreator
@@ -104,10 +130,10 @@ public class Message {
   public static class BoardUpdate {
     private final Board board;
     @JsonCreator
-    public BoardUpdate(@JsonProperty("board") Board b) {
-      this.board = b;
+    public BoardUpdate(@JsonProperty("board") Board board) {
+      this.board = board;
     }
-    public Board getBoard() { return this.board; }
+    public Board getBoard() { return board; }
   }
 
   public static class Start {
@@ -116,7 +142,7 @@ public class Message {
     public Start(@JsonProperty("color") char color) {
       this.color = color;
     }
-    public char getColor() { return this.color; }
+    public char getColor() { return color; }
   }
 
   public static class Turn {
@@ -125,13 +151,13 @@ public class Message {
     public Turn(@JsonProperty("isYours") boolean isYours) {
       this.isYours = isYours;
     }
-    public boolean getIsYours() { return this.isYours; }
+    public boolean getIsYours() { return isYours; }
   }
 
   // Tagged union storage
   private final Object msg;
   private final Type type;
-  public enum Type { Move, Invalid, Start, Turn, Board }
+  public enum Type { Move, Invalid, Start, Turn, Board, LobbyJoin, LobbyReady }
 
   // Constructors for different message types.
   public Message(Move msg) {
@@ -154,20 +180,28 @@ public class Message {
     this.msg = msg;
     this.type = Type.Board;
   }
+  public Message(LobbyJoin msg) {
+    this.msg = msg;
+    this.type = Type.LobbyJoin;
+  }
+  public Message(LobbyReady msg) {
+    this.msg = msg;
+    this.type = Type.LobbyReady;
+  }
 
-  // No-arg constructor for Jackson (not typically used directly)
-  protected Message() { this.msg = this.type = null; }
+  // No-arg constructor for Jackson
+  protected Message() {
+    this.msg = null;
+    this.type = null;
+  }
 
-  // Public accessors.
-  public Type getType() { return this.type; }
-  public Object getMessage() { return this.msg; }
+  public Type getType() { return type; }
+  public Object getMessage() { return msg; }
 
-  // --- JSON Serialization Helper Methods ---
-  // Convert this Message instance to a JSON string.
+  // JSON Serialization helper methods.
   public String serialize() throws Exception {
     return MessageJsonUtil.serialize(this);
   }
-  // Create a Message instance from a JSON string.
   public static Message deserialize(String json) throws Exception {
     return MessageJsonUtil.deserialize(json);
   }

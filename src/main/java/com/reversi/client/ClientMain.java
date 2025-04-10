@@ -1,18 +1,33 @@
 package com.reversi.client;
 
 import com.reversi.common.EventBus;
+import com.reversi.common.EventListener;
+import com.reversi.common.Message;
 import javax.swing.SwingUtilities;
 
-public class ClientMain {
-  public static void main(String[] args) {
+public class ClientMain implements EventListener<ServerMessage> {
+  // Entry point
+  public static void main(String[] args) { new ClientMain().start(); }
+
+  EventBus eventBus = new EventBus();
+  LobbyView lobbyView = new LobbyView();
+  GameController controller = new GameController(eventBus);
+
+  private void start() {
     SwingUtilities.invokeLater(() -> {
-      EventBus eventBus = new EventBus();
-      GameView view = new GameView();
-      eventBus.register(ServerMessage.class, view);
-      GameController controller = new GameController(eventBus);
-      view.setController(controller);
-      view.createAndShowGUI();
+      lobbyView.setController(controller);
+      GameView gameView = lobbyView.getGameView();
+      gameView.setController(controller);
+      eventBus.register(ServerMessage.class, gameView);
+      eventBus.register(ServerMessage.class, this);
+
       controller.connectToServer();
     });
+  }
+
+  @Override
+  public void onEvent(ServerMessage e) {
+    if (e.getMessage().getType() == Message.Type.Start)
+      lobbyView.switchToGameView();
   }
 }
