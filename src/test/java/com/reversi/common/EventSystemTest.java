@@ -164,18 +164,23 @@ public class EventSystemTest {
     CountDownLatch registrationLatch = new CountDownLatch(threadCount);
     ExecutorService executor = Executors.newFixedThreadPool(threadCount * 2);
 
+    CopyOnWriteArrayList<EventListener<CustomEvent>> listeners =
+        new CopyOnWriteArrayList<>();
+
     // Pre-register several listeners concurrently.
     for (int i = 0; i < threadCount; i++) {
       executor.submit(() -> {
         try {
           startLatch.await();
-          eventBus.register(CustomEvent.class,
-                            new EventListener<CustomEvent>() {
-                              @Override
-                              public void onEvent(CustomEvent event) {
-                                invocationCount.incrementAndGet();
-                              }
-                            });
+          EventListener<CustomEvent> listener =
+              new EventListener<CustomEvent>() {
+                @Override
+                public void onEvent(CustomEvent event) {
+                  invocationCount.incrementAndGet();
+                }
+              };
+          listeners.add(listener);
+          eventBus.register(CustomEvent.class, listener);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
         } finally {
@@ -216,5 +221,101 @@ public class EventSystemTest {
     assertEquals(expectedCount, invocationCount.get(),
                  "The total number of event invocations should match the "
                      + "expected count.");
+  }
+
+  /**
+   * This test verifies that a listener that is only referenced by a weak
+   * reference is eventually garbage collected so that it is not invoked.
+   */
+  @Test
+  public void testWeakListenerIsRemovedAfterGC() throws InterruptedException {
+    EventBus eventBus = new EventBus();
+    AtomicBoolean invoked = new AtomicBoolean(false);
+
+    // Register a listener in a block so that no strong reference remains
+    // afterwards.
+    {
+      EventListener<CustomEvent> tempListener =
+          new EventListener<CustomEvent>() {
+            @Override
+            public void onEvent(CustomEvent event) {
+              invoked.set(true);
+            }
+          };
+      eventBus.register(CustomEvent.class, tempListener);
+
+      // Verify that there is one active listener.
+      assertEquals(1, eventBus.getActiveListenersCount(CustomEvent.class),
+                   "Expected one active listener initially.");
+    }
+
+    // Remove any remaining strong references and suggest garbage collection.
+    // Loop a few times to give the GC a chance to collect the listener.
+    for (int i = 0;
+         i < 10 && eventBus.getActiveListenersCount(CustomEvent.class) != 0;
+         i++) {
+      System.gc();
+      Thread.sleep(100);
+    }
+
+    // At this point, the listener should be reclaimed by the garbage collector.
+    // Posting an event should not invoke the collected listener.
+    eventBus.post(new CustomEvent(LocalTime.now(), "GC Test"));
+    assertFalse(invoked.get(), "The weak listener should have been garbage "
+                                   + "collected and not invoked.");
+
+    // After posting, expired references should have been purged from the
+    // internal list.
+    assertEquals(
+        0, eventBus.getActiveListenersCount(CustomEvent.class),
+        "Expired weak listeners should be removed after event dispatch.");
+  }
+
+  /**
+   * This test registers two listeners, one that remains strongly referenced and
+   * one that is only weakly referenced. It verifies that after garbage
+   * collection, only the strongly referenced listener is invoked.
+   */
+  @Test
+  public void testMixedListenersWeakAndStrong() throws InterruptedException {
+    EventBus eventBus = new EventBus();
+    AtomicInteger invocationCount = new AtomicInteger(0);
+
+    // Strongly referenced listener.
+    EventListener<CustomEvent> strongListener =
+        event -> invocationCount.incrementAndGet();
+    // Register the strong listener.
+    eventBus.register(CustomEvent.class, strongListener);
+
+    // Weak listener created in a block to remove strong reference after
+    // registration.
+    {
+      EventListener<CustomEvent> tempWeakListener =
+          event -> invocationCount.incrementAndGet();
+      eventBus.register(CustomEvent.class, tempWeakListener);
+
+      // At this point, there should be 2 listeners registered.
+      assertEquals(2, eventBus.getActiveListenersCount(CustomEvent.class));
+    }
+
+    // Hint the GC to collect the weak-only listener.
+    for (int i = 0;
+         i < 10 && eventBus.getActiveListenersCount(CustomEvent.class) > 1;
+         i++) {
+      System.gc();
+      Thread.sleep(100);
+    }
+
+    // Post an event.
+    eventBus.post(new CustomEvent(LocalTime.now(), "Mixed Test"));
+
+    // Only the strong listener should be invoked.
+    assertEquals(
+        1, invocationCount.get(),
+        "Only the strongly referenced listener should be invoked after GC.");
+
+    // Verify that the expired weak listener has been removed.
+    assertEquals(1, eventBus.getActiveListenersCount(CustomEvent.class),
+                 "Only the strongly referenced listener should remain active.");
   }
 }
