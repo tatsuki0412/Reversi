@@ -6,7 +6,6 @@ import com.reversi.common.Message;
 import org.junit.jupiter.api.Test;
 
 public class MessageTest {
-
   @Test
   void testSerializeDeserializeMove() {
     Message.Move move = new Message.Move(3, 2);
