@@ -7,11 +7,12 @@ public class ClientMain {
   public static void main(String[] args) {
     SwingUtilities.invokeLater(() -> {
       EventBus eventBus = new EventBus();
-      GameView view = new GameView();
-      eventBus.register(ServerMessage.class, view);
+      LobbyView lobbyView = new LobbyView();
       GameController controller = new GameController(eventBus);
-      view.setController(controller);
-      view.createAndShowGUI();
+      lobbyView.setController(controller);
+      // Register the game view to receive server messages.
+      eventBus.register(ServerMessage.class, lobbyView.getGameView());
+      // Connect to the server.
       controller.connectToServer();
     });
   }
