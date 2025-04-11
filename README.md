@@ -1,4 +1,10 @@
 
+## Obtain the Code:
+
+```bash
+git clone https://github.com/Mickey-snow/Reversi.git
+cd Reversi/
+```
 
 ## Compile the Code:
 
@@ -20,4 +26,16 @@ In two separate terminal windows, run:
 
 ```bash
 mvn exec:java -Dexec.mainClass=com.reversi.client.ClientMain
+```
+
+## Run unit tests:
+
+```bash
+mvn clean test
+```
+
+## Build documentation
+
+```bash
+mvn javadoc:javadoc
 ```
