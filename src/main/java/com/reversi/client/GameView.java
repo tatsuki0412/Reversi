@@ -11,14 +11,14 @@ import javax.swing.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class GameView implements EventListener<ServerMessage> {
+public class GameView {
   private static final Logger logger = LoggerFactory.getLogger(GameView.class);
 
   private JPanel mainPanel;
   private JButton[][] buttons = new JButton[8][8];
   private GameController controller;
   private JLabel statusLabel;
-  private char playerColor;
+  private Player player;
 
   public GameView() {
     mainPanel = new JPanel(new BorderLayout());
@@ -53,36 +53,10 @@ public class GameView implements EventListener<ServerMessage> {
 
   public void setController(GameController c) { controller = c; }
 
-  public void setPlayerColor(char color) {
-    playerColor = color;
-    SwingUtilities.invokeLater(() -> {
-      statusLabel.setText("You are " + ((color == 'B') ? "Black" : "White"));
-    });
-  }
-
-  @Override
-  public void onEvent(ServerMessage e) {
-    Message msg = e.getMessage();
-    switch (msg.getType()) {
-    case Start:
-      Message.Start start = (Message.Start)msg.getMessage();
-      this.playerColor = start.getColor();
-      break;
-    case Board:
-      Message.BoardUpdate boardupd = (Message.BoardUpdate)msg.getMessage();
-      updateBoard(boardupd.getBoard());
-      break;
-    case Turn:
-      Message.Turn turn = (Message.Turn)msg.getMessage();
-      updateTurn(turn.getIsYours());
-      break;
-    case Invalid:
-      Message.Invalid invalid = (Message.Invalid)msg.getMessage();
-      showInvalidMove(invalid.getReason());
-      break;
-    default:
-      break;
-    }
+  public void setPlayer(Player p) {
+    this.player = p;
+    SwingUtilities.invokeLater(
+        () -> { statusLabel.setText("You are " + this.player.toString()); });
   }
 
   public void updateBoard(Board board) {
@@ -104,12 +78,10 @@ public class GameView implements EventListener<ServerMessage> {
 
   public void updateTurn(boolean isYours) {
     SwingUtilities.invokeLater(() -> {
-      if (isYours) {
-        statusLabel.setText("Your turn (" +
-                            (playerColor == 'B' ? "Black" : "White") + ")");
-      } else {
+      if (isYours)
+        statusLabel.setText("Your turn (" + player.toString() + ")");
+      else
         statusLabel.setText("Opponent's turn");
-      }
     });
   }
 
