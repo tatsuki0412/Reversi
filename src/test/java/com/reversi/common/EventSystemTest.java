@@ -12,8 +12,7 @@ import org.junit.jupiter.api.Test;
 /**
  * A custom event implementation that holds a message.
  */
-class CustomEvent implements Event {
-  private final LocalTime timestamp;
+class CustomEvent extends Event {
   private final String message;
 
   /**
@@ -22,13 +21,8 @@ class CustomEvent implements Event {
    * @param message the message associated with this event
    */
   public CustomEvent(LocalTime time, String message) {
-    this.timestamp = time;
+    super(time);
     this.message = message;
-  }
-
-  @Override
-  public LocalTime getTimestamp() {
-    return timestamp;
   }
 
   /**
@@ -116,12 +110,7 @@ public class EventSystemTest {
   public void testFilterEventType() {
     EventBus eventBus = new EventBus();
 
-    class MyEvent implements Event {
-      @Override
-      public LocalTime getTimestamp() {
-        return LocalTime.now();
-      }
-    }
+    class MyEvent extends Event {}
 
     AtomicInteger myListenerCnt = new AtomicInteger(0);
     AtomicInteger customListenerCnt = new AtomicInteger(0);
