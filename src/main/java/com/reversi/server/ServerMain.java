@@ -5,7 +5,7 @@ import com.reversi.common.EventListener;
 import com.reversi.common.Message;
 import com.reversi.common.Player;
 import com.reversi.common.ReversiGame;
-import com.reversi.server.events.GameSessionUpdate;
+import com.reversi.server.events.GameStateChange;
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -37,7 +37,7 @@ public class ServerMain {
     listeners.add(clientListener);
     listeners.add(gameListener);
     eventBus.register(ClientMessage.class, clientListener);
-    eventBus.register(GameSessionUpdate.class, gameListener);
+    eventBus.register(GameStateChange.class, gameListener);
 
     try (ServerSocket serverSocket = new ServerSocket(PORT)) {
       logger.info("Server started on port {}", PORT);
@@ -113,7 +113,7 @@ public class ServerMain {
               // Notify players that game just started
               blackPlayer.sendMessage(new Message(new Message.Start('B')));
               whitePlayer.sendMessage(new Message(new Message.Start('W')));
-              eventBus.post(new GameSessionUpdate(gameSession));
+              eventBus.post(new GameStateChange(gameSession));
 
               logger.info("Game session started for room {}",
                           clientRoom.getRoomId());
@@ -143,7 +143,7 @@ public class ServerMain {
             handler.sendMessage(
                 new Message(new Message.Invalid("Invalid move")));
           }
-          eventBus.post(new GameSessionUpdate(session));
+          eventBus.post(new GameStateChange(session));
         } else {
           logger.error(
               "Received move from client {} with no active game session.",
@@ -161,9 +161,9 @@ public class ServerMain {
 
   // ---------------------------------------------------------------
   // EventListener GameSessionUpdateListener
-  class GameSessionUpdateListener implements EventListener<GameSessionUpdate> {
+  class GameSessionUpdateListener implements EventListener<GameStateChange> {
     @Override
-    public void onEvent(GameSessionUpdate e) {
+    public void onEvent(GameStateChange e) {
       GameSession session = e.getSession();
       ReversiGame game = session.getGame();
 

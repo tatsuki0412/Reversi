@@ -1,6 +1,7 @@
 package com.reversi.client;
 
 import com.reversi.common.EventBus;
+import com.reversi.common.JacksonObjMapper;
 import com.reversi.common.Message;
 import java.io.*;
 import java.net.*;
@@ -37,7 +38,8 @@ public class GameController {
       String line;
       while ((line = in.readLine()) != null) {
         logger.info("Received: {}", line);
-        eventBus.post(new ServerMessage(Message.deserialize(line)));
+        Message msg = JacksonObjMapper.get().readValue(line, Message.class);
+        eventBus.post(new ServerMessage(msg));
       }
     } catch (IOException e) {
       logger.error("Error listening to server", e);
@@ -53,7 +55,7 @@ public class GameController {
     }
 
     try {
-      out.println(msg.serialize());
+      out.println(JacksonObjMapper.get().writeValueAsString(msg));
     } catch (Exception e) {
       logger.error("Failed to send: {}", msg);
     }

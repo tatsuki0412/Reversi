@@ -4,11 +4,11 @@ import com.reversi.common.Event;
 import com.reversi.server.GameSession;
 import java.time.LocalTime;
 
-public class GameSessionUpdate implements Event {
+public class GameStateChange implements Event {
   private final LocalTime timestamp;
   private final GameSession session;
 
-  public GameSessionUpdate(GameSession session) {
+  public GameStateChange(GameSession session) {
     this.timestamp = LocalTime.now();
     this.session = session;
   }

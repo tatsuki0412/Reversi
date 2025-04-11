@@ -2,90 +2,20 @@ package com.reversi.common;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import java.io.IOException;
 
-class MessageJsonUtil {
-  private static final ObjectMapper objectMapper = JacksonObjMapper.get();
-
-  public static String serialize(Message message) throws Exception {
-    // Create a JSON object that has both "type" and "msg" properties.
-    // Using Jackson’s default POJO-to-JSON, we can set up an intermediary
-    // container. One common way is to create a little anonymous POJO as a
-    // wrapper:
-    Wrapper wrapper = new Wrapper();
-    wrapper.type = message.getType();
-    wrapper.msg = message.getMessage();
-    return objectMapper.writeValueAsString(wrapper);
-  }
-
-  public static Message deserialize(String json) throws Exception {
-    return objectMapper.readValue(json, Message.class);
-  }
-
-  // Simple helper inner class for serialization.
-  public static class Wrapper {
-    public Message.Type type;
-    public Object msg;
-  }
-}
-
-class MessageDeserializer extends JsonDeserializer<Message> {
-  private static final ObjectMapper mapper = new ObjectMapper();
-
-  @Override
-  public Message deserialize(JsonParser p, DeserializationContext ctxt)
-      throws IOException {
-    JsonNode node = p.getCodec().readTree(p);
-    String typeStr = node.get("type").asText();
-    Message.Type type = Message.Type.valueOf(typeStr);
-    JsonNode msgNode = node.get("msg");
-
-    switch (type) {
-    case Move:
-      Message.Move move = mapper.treeToValue(msgNode, Message.Move.class);
-      return new Message(move);
-
-    case Invalid:
-      Message.Invalid invalid =
-          mapper.treeToValue(msgNode, Message.Invalid.class);
-      return new Message(invalid);
-
-    case Turn:
-      Message.Turn turn = mapper.treeToValue(msgNode, Message.Turn.class);
-      return new Message(turn);
-
-    case Start:
-      Message.Start start = mapper.treeToValue(msgNode, Message.Start.class);
-      return new Message(start);
-
-    case Board:
-      Message.BoardUpdate board =
-          mapper.treeToValue(msgNode, Message.BoardUpdate.class);
-      return new Message(board);
-
-    case LobbyJoin:
-      Message.LobbyJoin lobbyJoin =
-          mapper.treeToValue(msgNode, Message.LobbyJoin.class);
-      return new Message(lobbyJoin);
-
-    case LobbyReady:
-      Message.LobbyReady lobbyReady =
-          mapper.treeToValue(msgNode, Message.LobbyReady.class);
-      return new Message(lobbyReady);
-
-    default:
-      throw new IllegalStateException("Unexpected type: " + typeStr);
-    }
-  }
-}
-
-@JsonDeserialize(using = MessageDeserializer.class)
+@JsonSerialize(using = Message.Serializer.class)
+@JsonDeserialize(using = Message.Deserializer.class)
 public class Message {
   // Nested message types for Client -> Server
   public static class LobbyJoin {
@@ -198,11 +128,75 @@ public class Message {
   public Type getType() { return type; }
   public Object getMessage() { return msg; }
 
-  // JSON Serialization helper methods.
-  public String serialize() throws Exception {
-    return MessageJsonUtil.serialize(this);
+  // ===================== Serialization Support =====================
+  static class Serializer extends JsonSerializer<Message> {
+    @Override
+    public void serialize(Message m, JsonGenerator gen,
+                          SerializerProvider serializers) throws IOException {
+      // Begin writing the JSON object
+      gen.writeStartObject();
+
+      // Write the "type" field using the enum name.
+      gen.writeStringField("type", m.getType().name());
+
+      // Write the "body" field.
+      // Here we indicate to the generator that the "body" field will contain
+      // a nested JSON object. Jackson will use the default serializer for this.
+      gen.writeFieldName("body");
+      serializers.defaultSerializeValue(m.getMessage(), gen);
+
+      // Complete the JSON object.
+      gen.writeEndObject();
+    }
   }
-  public static Message deserialize(String json) throws Exception {
-    return MessageJsonUtil.deserialize(json);
+
+  static class Deserializer extends JsonDeserializer<Message> {
+    @Override
+    public Message deserialize(JsonParser p, DeserializationContext ctxt)
+        throws IOException {
+      ObjectMapper mapper = JacksonObjMapper.get();
+
+      JsonNode node = p.getCodec().readTree(p);
+      String typeStr = node.get("type").asText();
+      Message.Type type = Message.Type.valueOf(typeStr);
+      JsonNode msgNode = node.get("body");
+
+      switch (type) {
+      case Move:
+        Message.Move move = mapper.treeToValue(msgNode, Message.Move.class);
+        return new Message(move);
+
+      case Invalid:
+        Message.Invalid invalid =
+            mapper.treeToValue(msgNode, Message.Invalid.class);
+        return new Message(invalid);
+
+      case Turn:
+        Message.Turn turn = mapper.treeToValue(msgNode, Message.Turn.class);
+        return new Message(turn);
+
+      case Start:
+        Message.Start start = mapper.treeToValue(msgNode, Message.Start.class);
+        return new Message(start);
+
+      case Board:
+        Message.BoardUpdate board =
+            mapper.treeToValue(msgNode, Message.BoardUpdate.class);
+        return new Message(board);
+
+      case LobbyJoin:
+        Message.LobbyJoin lobbyJoin =
+            mapper.treeToValue(msgNode, Message.LobbyJoin.class);
+        return new Message(lobbyJoin);
+
+      case LobbyReady:
+        Message.LobbyReady lobbyReady =
+            mapper.treeToValue(msgNode, Message.LobbyReady.class);
+        return new Message(lobbyReady);
+
+      default:
+        throw new IllegalStateException("Unexpected type: " + typeStr);
+      }
+    }
   }
 }

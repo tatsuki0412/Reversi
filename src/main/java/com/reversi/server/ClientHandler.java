@@ -1,6 +1,7 @@
 package com.reversi.server;
 
 import com.reversi.common.EventBus;
+import com.reversi.common.JacksonObjMapper;
 import com.reversi.common.Message;
 import java.io.*;
 import java.net.*;
@@ -35,7 +36,7 @@ public class ClientHandler extends Thread {
 
   public void sendMessage(Message msg) {
     try {
-      out.println(msg.serialize());
+      out.println(JacksonObjMapper.get().writeValueAsString(msg));
     } catch (Exception e) {
       logger.error("Failed to send message: {}", msg.toString());
     }
@@ -50,7 +51,7 @@ public class ClientHandler extends Thread {
 
         Message msg;
         try {
-          msg = Message.deserialize(line);
+          msg = JacksonObjMapper.get().readValue(line, Message.class);
           eventBus.post(new ClientMessage(msg, this));
         } catch (Exception e) {
           logger.error("Failed to process reveived data: {}\n{}", line,
