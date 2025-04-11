@@ -14,10 +14,11 @@ public class ClientHandler extends Thread {
   private Socket socket;
   private PrintWriter out;
   private BufferedReader in;
-  private char playerColor; // 'B' or 'W'
   private EventBus eventBus;
+  private int id;
 
-  public ClientHandler(Socket s, EventBus eventBus) {
+  public ClientHandler(int id, Socket s, EventBus eventBus) {
+    this.id = id;
     this.socket = s;
     this.eventBus = eventBus;
 
@@ -26,13 +27,11 @@ public class ClientHandler extends Thread {
       out = new PrintWriter(socket.getOutputStream(), true);
       in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     } catch (IOException e) {
-      logger.error("Error initializing streams for player {}", playerColor, e);
+      logger.error("Error initializing streams for client {}", id, e);
     }
   }
 
-  public void setPlayerColor(char color) { playerColor = color; }
-
-  public char getPlayerColor() { return playerColor; }
+  public int getID() { return id; }
 
   public void sendMessage(Message msg) {
     try {
@@ -47,7 +46,7 @@ public class ClientHandler extends Thread {
       String line;
       // Listen for incoming messages from the client.
       while ((line = in.readLine()) != null) {
-        logger.info("Received from player {}: {}", playerColor, line);
+        logger.info("Received from client {}: {}", id, line);
 
         Message msg;
         try {
@@ -59,12 +58,12 @@ public class ClientHandler extends Thread {
         }
       }
     } catch (IOException e) {
-      logger.error("Connection with player {} lost.", playerColor, e);
+      logger.error("Connection with client {} lost.", id, e);
     } finally {
       try {
         socket.close();
       } catch (IOException e) {
-        logger.error("Error closing socket for player {}", playerColor, e);
+        logger.error("Error closing socket for client {}", id, e);
       }
     }
   }

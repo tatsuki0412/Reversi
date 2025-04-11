@@ -49,7 +49,7 @@ public class EventBus {
     if (registeredListeners != null) {
       // Remove expired (garbage collected) listeners before invoking any
       // callbacks.
-      // registeredListeners.removeIf(ref -> ref.get() == null);
+      registeredListeners.removeIf(ref -> ref.get() == null);
 
       for (WeakReference<EventListener<? extends Event>> ref :
            registeredListeners) {
