@@ -1,6 +1,5 @@
 package com.reversi.server;
 
-import com.reversi.common.Message;
 import com.reversi.common.Player;
 import com.reversi.common.ReversiGame;
 

@@ -2,6 +2,7 @@ package com.reversi.common;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
@@ -337,39 +338,102 @@ public class Board {
   }
 
   // ===================== Serialization Support =====================
-
-  /**
-   * Custom serializer for the Board class.
-   * <p>
-   * Serializes the board using its string representation.
-   * </p>
-   */
   public static class BoardSerializer extends JsonSerializer<Board> {
     @Override
     public void serialize(Board board, JsonGenerator gen,
                           SerializerProvider serializers) throws IOException {
-      gen.writeString(board.toString());
+      gen.writeStartObject();
+      // Write an explicit "grid" field as an array of arrays.
+      gen.writeArrayFieldStart("grid");
+      for (int i = 0; i < BOARD_SIZE; i++) {
+        gen.writeStartArray();
+        for (int j = 0; j < BOARD_SIZE; j++) {
+          // Map Player status to explicit string values.
+          switch (board.status[i][j]) {
+          case Black:
+            gen.writeString("B");
+            break;
+          case White:
+            gen.writeString("W");
+            break;
+          default:
+            gen.writeString("None");
+            break;
+          }
+        }
+        gen.writeEndArray();
+      }
+      gen.writeEndArray(); // End of "grid" array.
+      gen.writeEndObject();
     }
   }
 
-  /**
-   * Custom deserializer for the Board class.
-   * <p>
-   * Expects the board to be represented as a single string value.
-   * </p>
-   */
   public static class BoardDeserializer extends JsonDeserializer<Board> {
     @Override
     public Board deserialize(JsonParser p, DeserializationContext ctxt)
         throws IOException {
-      String boardStr = p.getValueAsString();
-      try {
-        return new Board(boardStr);
-      } catch (IllegalArgumentException e) {
-        // Wrap the exception into an IOException for Jackson to handle.
-        throw new IOException("Failed to deserialize Board: " + e.getMessage(),
-                              e);
+      // Ensure that we start with a JSON object.
+      if (p.currentToken() != JsonToken.START_OBJECT) {
+        throw new IOException("Expected START_OBJECT token, but got: " +
+                              p.currentToken());
       }
+
+      Board board = new Board(); // Create an empty board.
+
+      // Process the fields of the object.
+      while (p.nextToken() != JsonToken.END_OBJECT) {
+        String fieldName = p.getCurrentName();
+        p.nextToken(); // Move to the field value.
+
+        if ("grid".equals(fieldName)) {
+          // The "grid" field must be an array.
+          if (p.currentToken() != JsonToken.START_ARRAY) {
+            throw new IOException(
+                "Expected 'grid' field to be an array, but got: " +
+                p.currentToken());
+          }
+          int row = 0;
+          while (p.nextToken() != JsonToken.END_ARRAY) {
+            // Each row must itself be an array.
+            if (p.currentToken() != JsonToken.START_ARRAY) {
+              throw new IOException(
+                  "Expected each row to be an array, but got: " +
+                  p.currentToken());
+            }
+            int col = 0;
+            while (p.nextToken() != JsonToken.END_ARRAY) {
+              if (p.currentToken() != JsonToken.VALUE_STRING) {
+                throw new IOException("Expected a string value at row " + row +
+                                      " column " + col +
+                                      ", but got: " + p.currentToken());
+              }
+              String cellValue = p.getText();
+              Player cell;
+              if ("B".equals(cellValue)) {
+                cell = Player.Black;
+              } else if ("W".equals(cellValue)) {
+                cell = Player.White;
+              } else if ("None".equals(cellValue)) {
+                cell = Player.None;
+              } else {
+                throw new IOException("Invalid cell value '" + cellValue +
+                                      "' at row " + row + " column " + col);
+              }
+              board.status[row][col] = cell;
+              col++;
+            }
+            if (col != BOARD_SIZE)
+              throw new IOException("Row " + row + " has " + col +
+                                    " cells; expected " + BOARD_SIZE);
+            row++;
+          }
+          if (row != BOARD_SIZE)
+            throw new IOException("Grid has " + row + " rows; expected " +
+                                  BOARD_SIZE);
+        } else
+          throw new IOException("Unexpected field: " + fieldName);
+      }
+      return board;
     }
   }
 }
