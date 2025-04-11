@@ -2,146 +2,182 @@ package com.reversi.common;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class LobbyRoomTest {
+public class LobbyRoomTest {
 
-  private LobbyRoom room;
+  private LobbyRoom lobby;
 
   @BeforeEach
-  void setUp() {
-    room = new LobbyRoom("TestRoom");
+  public void setUp() {
+    lobby = new LobbyRoom("TestRoom");
   }
 
   @Test
-  void testSize() {
-    assertEquals(0, room.size());
-    assertTrue(room.isEmpty());
+  public void testRoomNameAndEmptyStatus() {
+    // Verify the room name, emptiness, and initial size.
+    assertEquals("TestRoom", lobby.getRoomName());
+    assertTrue(lobby.isEmpty());
+    assertEquals(0, lobby.size());
   }
 
   @Test
-  void testAddPlayer() {
-    // Add first player
-    assertTrue(room.addPlayer(1), "Should be able to add first player");
-    // Adding the same player should fail
-    assertFalse(room.addPlayer(1),
-                "Should not be able to add a duplicate player");
-    // Add second player successfully
-    assertTrue(room.addPlayer(2), "Should be able to add second player");
-    // Cannot add a third player - room limit is 2 players
-    assertFalse(room.addPlayer(3), "Should not be able to add a third player");
+  public void testAddPlayerSuccessAndRoleAssignment() {
+    // Add the first player.
+    PlayerStatus ps1 = new PlayerStatus(1);
+    assertTrue(lobby.addPlayer(ps1));
+    // The first player's role should be set to Black.
+    assertEquals(Player.Black, ps1.getRole());
+    assertFalse(lobby.isEmpty());
+    assertTrue(lobby.contains(1));
+    assertEquals(1, lobby.size());
 
-    // Verify that the player list size is 2
-    List<Integer> players = room.getPlayers();
-    assertEquals(2, players.size(), "Room should contain exactly 2 players");
+    // Add the second player.
+    PlayerStatus ps2 = new PlayerStatus(2);
+    assertTrue(lobby.addPlayer(ps2));
+    // The second player's role should be set to White.
+    assertEquals(Player.White, ps2.getRole());
+    assertEquals(2, lobby.size());
   }
 
   @Test
-  void testSetReadiness() {
-    room.addPlayer(1);
-    room.addPlayer(2);
+  public void testAddPlayerFailsWhenFullOrDuplicate() {
+    // Add two players.
+    PlayerStatus ps1 = new PlayerStatus(1);
+    PlayerStatus ps2 = new PlayerStatus(2);
+    PlayerStatus ps3 = new PlayerStatus(3);
+    assertTrue(lobby.addPlayer(ps1));
+    assertTrue(lobby.addPlayer(ps2));
 
-    // Initially, all players are not ready; room should not be ready to start
-    assertFalse(room.isReadyToStart(),
-                "Room should not be ready to start initially");
+    // The lobby is full (size >= 2), so adding another should fail.
+    assertFalse(lobby.addPlayer(ps3));
 
-    // Set both players to ready
-    assertTrue(room.setReadiness(1, true),
-               "Should successfully set player 1 as ready");
-    assertTrue(room.setReadiness(2, true),
-               "Should successfully set player 2 as ready");
-    assertTrue(room.isReadyToStart(),
-               "Room should be ready to start when both players are ready");
-
-    // Toggling one player back to not ready resets all readiness.
-    assertTrue(room.setReadiness(1, false),
-               "Toggling readiness should succeed");
-    assertFalse(room.isReadyToStart(),
-                "Room should not be ready after a player cancels ready");
+    // Attempt to add a duplicate player (same id) should also fail.
+    PlayerStatus duplicate = new PlayerStatus(1);
+    assertFalse(lobby.addPlayer(duplicate));
   }
 
   @Test
-  void testSetReadiness_InvalidPlayer() {
-    // Attempting to set readiness for a player that hasn't been added should
-    // fail.
-    assertFalse(room.setReadiness(1, true),
-                "Setting readiness for an unknown player should fail");
+  public void testUpdatePlayerStatusNoChangeAndNullInput() {
+    // Add a player.
+    PlayerStatus ps1 = new PlayerStatus(1);
+    lobby.addPlayer(ps1);
+
+    // Update with a new status that is equal to the current status.
+    // By default, new PlayerStatus(1) has ready=false and role will be later
+    // set to Black by addPlayer.
+    PlayerStatus sameStatus = new PlayerStatus(1);
+    // No change is applied because equals compares the ready state and role.
+    assertFalse(lobby.updatePlayerStatus(1, sameStatus));
+
+    // Test update when newStatus is null.
+    assertFalse(lobby.updatePlayerStatus(1, null));
+
+    // Test update for a non-existent player.
+    assertFalse(lobby.updatePlayerStatus(3, new PlayerStatus(3)));
   }
 
   @Test
-  void testSetRole() {
-    room.addPlayer(1);
-    room.addPlayer(2);
+  public void testUpdatePlayerStatusWithChangeAndCancelReadiness() {
+    // Create and add two players.
+    PlayerStatus ps1 = new PlayerStatus(1);
+    PlayerStatus ps2 = new PlayerStatus(2);
+    lobby.addPlayer(ps1);
+    lobby.addPlayer(ps2);
 
-    // Setting role to Player.None should fail
-    assertFalse(room.setRole(1, Player.None),
-                "Setting role to None should fail");
+    // Set both players as ready.
+    ps1.setReady(true);
+    ps2.setReady(true);
 
-    // Set both players to ready before changing role
-    room.setReadiness(1, true);
-    room.setReadiness(2, true);
-    assertTrue(room.isReadyToStart(), "Room should be ready to start");
+    // Update one player's status such that it differs from its current status.
+    // Note: The default constructor creates a status with ready=false.
+    PlayerStatus newStatus = new PlayerStatus(1);
+    // The player originally was ready, so this is a change.
+    assertTrue(lobby.updatePlayerStatus(1, newStatus));
 
-    // Change role for player 1
-    // Changing role resets readiness for all players
-    assertTrue(room.setRole(1, Player.White),
-               "Should be able to change the role for player 1");
-    assertFalse(
-        room.isReadyToStart(),
-        "Room should not be ready after a role change resets readiness");
-
-    // Change back to the original role for player 1
-    assertTrue(room.setRole(1, Player.Black),
-               "Should be able to change the role back");
-    // Re-set readiness to mark room ready to start
-    room.setReadiness(1, true);
-    room.setReadiness(2, true);
-    assertTrue(
-        room.isReadyToStart(),
-        "Room should be ready after both players are ready with valid roles");
+    // After updating, the cancelReadiness method should have been called:
+    // All players' readiness should now be set to false.
+    assertFalse(lobby.getPlayerStatus(1).isReady());
+    assertFalse(lobby.getPlayerStatus(2).isReady());
   }
 
   @Test
-  void testSetRole_InvalidPlayer() {
-    // Attempt to set role for a player who is not present should return false.
-    assertFalse(room.setRole(1, Player.Black),
-                "Setting role for a non-existent player should fail");
+  public void testIsReadyToStart() {
+    // When only one player is in the lobby, it should not be ready to start.
+    PlayerStatus ps1 = new PlayerStatus(1);
+    lobby.addPlayer(ps1);
+    ps1.setReady(true);
+    assertFalse(lobby.isReadyToStart());
+
+    // Add a second player.
+    PlayerStatus ps2 = new PlayerStatus(2);
+    lobby.addPlayer(ps2);
+
+    // When both players are ready and roles are correctly set, the lobby is
+    // ready to start.
+    ps2.setReady(true);
+    assertTrue(lobby.isReadyToStart());
+
+    // If one of the players becomes unready, the lobby should not be ready.
+    ps2.setReady(false);
+    assertFalse(lobby.isReadyToStart());
+
+    // If roles are not properly balanced (simulate by manually setting both
+    // players to the same role), the lobby should not be ready.
+    ps2.setRole(ps1.getRole()); // both players now have the same role
+    ps1.setReady(true);
+    ps2.setReady(true);
+    assertFalse(lobby.isReadyToStart());
   }
 
   @Test
-  void testRemovePlayer() {
-    room.addPlayer(1);
-    room.addPlayer(2);
-    room.setReadiness(1, true);
-    room.setReadiness(2, true);
-    assertTrue(room.isReadyToStart(), "Room should be ready before removal");
+  public void testRemovePlayerAndCancelReadiness() {
+    // Add two players and mark them as ready.
+    PlayerStatus ps1 = new PlayerStatus(1);
+    PlayerStatus ps2 = new PlayerStatus(2);
+    lobby.addPlayer(ps1);
+    lobby.addPlayer(ps2);
+    ps1.setReady(true);
+    ps2.setReady(true);
 
-    // Remove one player
-    assertTrue(room.removePlayer(1),
-               "Should successfully remove an existing player");
-    assertFalse(room.isReadyToStart(),
-                "Room should not be ready after a player is removed");
+    // Remove one player.
+    assertTrue(lobby.removePlayer(1));
+    assertFalse(lobby.contains(1));
+    assertEquals(1, lobby.size());
 
-    // Ensure getPlayers returns correct list size after removal
-    List<Integer> players = room.getPlayers();
-    assertEquals(1, players.size(),
-                 "Room should contain 1 player after removal");
+    // The removal should cancel readiness for all players.
+    assertFalse(ps2.isReady());
 
-    // Attempting to remove the same player again should fail
-    assertFalse(room.removePlayer(1),
-                "Removing a non-existent player should fail");
+    // Removing a non-existent player should return false.
+    assertFalse(lobby.removePlayer(3));
   }
 
   @Test
-  void testGetPlayersImmutability() {
-    room.addPlayer(1);
-    List<Integer> playersCopy = room.getPlayers();
-    playersCopy.add(2); // Mutate the returned list
-    // The actual players list inside LobbyRoom should remain unchanged.
-    assertEquals(
-        1, room.getPlayers().size(),
-        "Internal players list should remain immutable from external changes");
+  public void testGetPlayersAndGetPlayerStatus() {
+    // Add two players.
+    PlayerStatus ps1 = new PlayerStatus(1);
+    PlayerStatus ps2 = new PlayerStatus(2);
+    lobby.addPlayer(ps1);
+    lobby.addPlayer(ps2);
+
+    // Retrieve the map of players.
+    Map<Integer, PlayerStatus> playersMap = lobby.getPlayers();
+    assertEquals(2, playersMap.size());
+    assertTrue(playersMap.containsKey(1));
+    assertTrue(playersMap.containsKey(2));
+
+    // Retrieve a single player's status.
+    PlayerStatus retrieved = lobby.getPlayerStatus(1);
+    assertNotNull(retrieved);
+
+    // Since LobbyRoom adds the player and sets the role automatically,
+    // we construct an expected PlayerStatus. Remember that equals compares only
+    // the ready status and role.
+    PlayerStatus expected = new PlayerStatus(1);
+    expected.setRole(Player.Black);
+    // By default, ready is false which is what we expect.
+    assertEquals(expected, retrieved);
   }
 }

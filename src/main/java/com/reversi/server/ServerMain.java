@@ -4,6 +4,7 @@ import com.reversi.common.EventBus;
 import com.reversi.common.EventListener;
 import com.reversi.common.LobbyRoom;
 import com.reversi.common.Message;
+import com.reversi.common.PlayerStatus;
 import com.reversi.common.ReversiGame;
 import com.reversi.server.events.GameStateChange;
 import java.io.*;
@@ -82,7 +83,7 @@ public class ServerMain {
             lobbyRooms.put(roomId, room);
           }
         }
-        room.addPlayer(handler.getID());
+        room.addPlayer(new PlayerStatus(handler.getID()));
         logger.info("Client {} joined room {}", handler.getID(), roomId);
         break;
       }
@@ -98,7 +99,9 @@ public class ServerMain {
           }
         }
         if (clientRoom != null) {
-          clientRoom.setReadiness(handler.getID(), lobbyReady.getIsReady());
+          var status = clientRoom.getPlayerStatus(handler.getID());
+          status.setReady(lobbyReady.getIsReady());
+          clientRoom.updatePlayerStatus(handler.getID(), status);
           logger.info("Client {} is ready in room {}", handler.getID(),
                       clientRoom.getRoomName());
 
