@@ -4,6 +4,7 @@ import com.reversi.common.EventBus;
 import com.reversi.common.EventListener;
 import com.reversi.common.Message;
 import com.reversi.common.Player;
+import com.reversi.common.ReversiGame;
 import java.awt.CardLayout;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -15,6 +16,9 @@ public class ClientMain implements EventListener<ServerMessage> {
 
   private EventBus eventBus = new EventBus();
   private GameController controller = new GameController(eventBus);
+
+  // Game model
+  private ReversiGame game = new ReversiGame();
 
   private JFrame frame;
   private JPanel mainPanel;
@@ -36,9 +40,9 @@ public class ClientMain implements EventListener<ServerMessage> {
       lobbyView.setController(controller);
       mainPanel.add(lobbyView.getMainPanel(), "lobby");
 
-      gameView = new GameView();
+      gameView = new GameView(game, Player.None);
       gameView.setController(controller);
-      mainPanel.add(gameView.getMainPanel(), "game");
+      mainPanel.add(gameView.getGamePanel(), "game");
 
       eventBus.register(ServerMessage.class, this);
 
@@ -55,15 +59,12 @@ public class ClientMain implements EventListener<ServerMessage> {
     case Start:
       cardLayout.show(mainPanel, "game");
       Message.Start start = (Message.Start)msg.getMessage();
-      gameView.setPlayer(Player.from(start.getColor()));
+      gameView.setGame(game, Player.from(start.getColor()));
       break;
-    case Board:
-      Message.BoardUpdate boardupd = (Message.BoardUpdate)msg.getMessage();
-      gameView.updateBoard(boardupd.getBoard());
-      break;
-    case Turn:
-      Message.Turn turn = (Message.Turn)msg.getMessage();
-      gameView.updateTurn(turn.getIsYours());
+    case GameUpdate:
+      Message.GameUpdate upd = (Message.GameUpdate)msg.getMessage();
+      game.loadFrom(upd.getGame());
+      gameView.update();
       break;
     case Invalid:
       Message.Invalid invalid = (Message.Invalid)msg.getMessage();

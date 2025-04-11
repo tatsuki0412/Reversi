@@ -165,20 +165,15 @@ public class ServerMain {
     @Override
     public void onEvent(GameStateChange e) {
       GameSession session = e.getSession();
-      ReversiGame game = session.getGame();
+      ReversiGame game = e.getSession().getGame();
 
-      var boardUpd = new Message.BoardUpdate(game.getBoard());
+      var gameUpd = new Message.GameUpdate(game);
+      var message = new Message(gameUpd);
       ClientHandler blackPlayer = clients.get(session.getBlackId());
       ClientHandler whitePlayer = clients.get(session.getWhiteId());
 
-      blackPlayer.sendMessage(new Message(boardUpd));
-      whitePlayer.sendMessage(new Message(boardUpd));
-
-      // TODO: remove this later
-      blackPlayer.sendMessage(new Message(
-          new Message.Turn(game.getCurrentPlayer() == Player.Black)));
-      whitePlayer.sendMessage(new Message(
-          new Message.Turn(game.getCurrentPlayer() == Player.White)));
+      blackPlayer.sendMessage(message);
+      whitePlayer.sendMessage(message);
     }
   }
 }

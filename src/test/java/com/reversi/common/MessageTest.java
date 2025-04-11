@@ -68,40 +68,6 @@ public class MessageTest {
   }
 
   @Test
-  void testSerializeDeserializeTurn() {
-    Message.Turn turn = new Message.Turn(false);
-    Message msg = new Message(turn);
-
-    String json = assertDoesNotThrow(() -> serialize(msg));
-    assertNotNull(json, "Serialized JSON should not be null");
-
-    Message deserialized = assertDoesNotThrow(() -> deserialize(json));
-    assertEquals(Message.Type.Turn, deserialized.getType(),
-                 "Message type should be Turn");
-
-    Message.Turn turnDeserialized = (Message.Turn)deserialized.getMessage();
-    assertFalse(turnDeserialized.getIsYours(), "Turn flag does not match");
-  }
-
-  @Test
-  void testSerializeDeserializeBoard() {
-    Message.BoardUpdate board = new Message.BoardUpdate(Board.createDefault());
-    Message msg = new Message(board);
-
-    String json = assertDoesNotThrow(() -> serialize(msg));
-    assertNotNull(json, "Serialized JSON should not be null");
-
-    Message deserialized = assertDoesNotThrow(() -> deserialize(json));
-    assertEquals(Message.Type.Board, deserialized.getType(),
-                 "Message type should be Board");
-
-    Message.BoardUpdate boardDeserialized =
-        (Message.BoardUpdate)deserialized.getMessage();
-    assertEquals(Board.createDefault(), boardDeserialized.getBoard(),
-                 "Board does not match");
-  }
-
-  @Test
   void testSerializeDeserializeLobbyJoin() {
     Message.LobbyJoin lobbyJoin = new Message.LobbyJoin("1234");
     Message msg = new Message(lobbyJoin);
@@ -137,5 +103,24 @@ public class MessageTest {
         (Message.LobbyReady)deserialized.getMessage();
     assertEquals(true, lobbyReadyDeserialized.getIsReady(),
                  "Ready status does not match");
+  }
+
+  @Test
+  void testSerializeDeserializeGameUpdate() {
+    var game = new ReversiGame();
+
+    Message.GameUpdate gameUpdate = new Message.GameUpdate(game);
+    var msg = new Message(gameUpdate);
+
+    String json = assertDoesNotThrow(() -> serialize(msg));
+    assertNotNull(json, "Serialized JSON for LobbyReady should not be null");
+
+    Message deserialized = assertDoesNotThrow(() -> deserialize(json));
+    assertEquals(Message.Type.GameUpdate, deserialized.getType(),
+                 "Message type should be GameUpdate");
+
+    Message.GameUpdate deserializedMessage =
+        (Message.GameUpdate)deserialized.getMessage();
+    assertTrue(game.equals(deserializedMessage.getGame()));
   }
 }

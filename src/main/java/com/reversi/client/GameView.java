@@ -1,12 +1,12 @@
 package com.reversi.client;
 
 import com.reversi.common.Board;
-import com.reversi.common.EventListener;
-import com.reversi.common.Message;
 import com.reversi.common.Player;
+import com.reversi.common.ReversiGame;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.ref.Reference;
 import javax.swing.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,18 +14,25 @@ import org.slf4j.LoggerFactory;
 public class GameView {
   private static final Logger logger = LoggerFactory.getLogger(GameView.class);
 
-  private JPanel mainPanel;
+  // ui
+  private JPanel gamePanel;
   private JButton[][] buttons = new JButton[8][8];
-  private GameController controller;
   private JLabel statusLabel;
-  private Player player;
 
-  public GameView() {
-    mainPanel = new JPanel(new BorderLayout());
+  // Reference to game model
+  private ReversiGame game;
+  private Player us;
+
+  // Reference to the controller
+  private GameController controller;
+
+  public GameView(ReversiGame game, Player us) {
+    setGame(game, us);
     initComponents();
   }
 
   private void initComponents() {
+    gamePanel = new JPanel(new BorderLayout());
     JPanel boardPanel = new JPanel(new GridLayout(8, 8));
     for (int i = 0; i < 8; i++) {
       for (int j = 0; j < 8; j++) {
@@ -45,41 +52,40 @@ public class GameView {
       }
     }
     statusLabel = new JLabel("Game has not started.");
-    mainPanel.add(statusLabel, BorderLayout.NORTH);
-    mainPanel.add(boardPanel, BorderLayout.CENTER);
+    gamePanel.add(statusLabel, BorderLayout.NORTH);
+    gamePanel.add(boardPanel, BorderLayout.CENTER);
   }
 
-  public JPanel getMainPanel() { return mainPanel; }
+  public JPanel getGamePanel() { return gamePanel; }
 
   public void setController(GameController c) { controller = c; }
-
-  public void setPlayer(Player p) {
-    this.player = p;
+  public void setGame(ReversiGame game, Player us) {
+    this.game = game;
+    this.us = us;
+  }
+  public void setUs(Player p) {
+    this.us = p;
     SwingUtilities.invokeLater(
-        () -> { statusLabel.setText("You are " + this.player.toString()); });
+        () -> { statusLabel.setText("You are " + this.us.toString()); });
   }
 
-  public void updateBoard(Board board) {
+  public void update() {
     SwingUtilities.invokeLater(() -> {
-      for (int i = 0; i < 8; i++) {
+      // update board
+      Board board = game.getBoard();
+      for (int i = 0; i < 8; i++)
         for (int j = 0; j < 8; j++) {
-          String txt;
-          if (board.get(i, j) == Player.Black)
-            txt = "B";
-          else if (board.get(i, j) == Player.White)
-            txt = "W";
-          else
-            txt = "";
-          buttons[i][j].setText(txt);
+          buttons[i][j].setText(switch (board.get(i, j)) {
+            case Black -> "B";
+            case White -> "W";
+            default -> "";
+          });
         }
-      }
-    });
-  }
 
-  public void updateTurn(boolean isYours) {
-    SwingUtilities.invokeLater(() -> {
-      if (isYours)
-        statusLabel.setText("Your turn (" + player.toString() + ")");
+      // update label
+      boolean ourTurn = game.getCurrentPlayer() == us;
+      if (ourTurn)
+        statusLabel.setText("Your turn (" + us.toString() + ")");
       else
         statusLabel.setText("Opponent's turn");
     });
@@ -87,7 +93,7 @@ public class GameView {
 
   public void showInvalidMove(String displayMessage) {
     SwingUtilities.invokeLater(() -> {
-      JOptionPane.showMessageDialog(mainPanel, displayMessage, "Error",
+      JOptionPane.showMessageDialog(gamePanel, displayMessage, "Error",
                                     JOptionPane.ERROR_MESSAGE);
     });
   }

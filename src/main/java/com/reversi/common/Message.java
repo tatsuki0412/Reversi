@@ -57,15 +57,6 @@ public class Message {
     public String getReason() { return reason; }
   }
 
-  public static class BoardUpdate {
-    private final Board board;
-    @JsonCreator
-    public BoardUpdate(@JsonProperty("board") Board board) {
-      this.board = board;
-    }
-    public Board getBoard() { return board; }
-  }
-
   public static class Start {
     private final char color;
     @JsonCreator
@@ -75,19 +66,28 @@ public class Message {
     public char getColor() { return color; }
   }
 
-  public static class Turn {
-    private final boolean isYours;
+  public static class GameUpdate {
+    private final ReversiGame game;
     @JsonCreator
-    public Turn(@JsonProperty("isYours") boolean isYours) {
-      this.isYours = isYours;
+    public GameUpdate(@JsonProperty("game") ReversiGame game) {
+      this.game = game;
     }
-    public boolean getIsYours() { return isYours; }
+    public ReversiGame getGame() { return game; }
   }
 
   // Tagged union storage
   private final Object msg;
   private final Type type;
-  public enum Type { Move, Invalid, Start, Turn, Board, LobbyJoin, LobbyReady }
+  public enum Type {
+    Move,
+    Invalid,
+    Start,
+    Turn,
+    Board,
+    LobbyJoin,
+    LobbyReady,
+    GameUpdate
+  }
 
   // Constructors for different message types.
   public Message(Move msg) {
@@ -102,14 +102,6 @@ public class Message {
     this.msg = msg;
     this.type = Type.Start;
   }
-  public Message(Turn msg) {
-    this.msg = msg;
-    this.type = Type.Turn;
-  }
-  public Message(BoardUpdate msg) {
-    this.msg = msg;
-    this.type = Type.Board;
-  }
   public Message(LobbyJoin msg) {
     this.msg = msg;
     this.type = Type.LobbyJoin;
@@ -117,6 +109,10 @@ public class Message {
   public Message(LobbyReady msg) {
     this.msg = msg;
     this.type = Type.LobbyReady;
+  }
+  public Message(GameUpdate msg) {
+    this.msg = msg;
+    this.type = Type.GameUpdate;
   }
 
   // No-arg constructor for Jackson
@@ -171,18 +167,9 @@ public class Message {
             mapper.treeToValue(msgNode, Message.Invalid.class);
         return new Message(invalid);
 
-      case Turn:
-        Message.Turn turn = mapper.treeToValue(msgNode, Message.Turn.class);
-        return new Message(turn);
-
       case Start:
         Message.Start start = mapper.treeToValue(msgNode, Message.Start.class);
         return new Message(start);
-
-      case Board:
-        Message.BoardUpdate board =
-            mapper.treeToValue(msgNode, Message.BoardUpdate.class);
-        return new Message(board);
 
       case LobbyJoin:
         Message.LobbyJoin lobbyJoin =
@@ -193,6 +180,11 @@ public class Message {
         Message.LobbyReady lobbyReady =
             mapper.treeToValue(msgNode, Message.LobbyReady.class);
         return new Message(lobbyReady);
+
+      case GameUpdate:
+        Message.GameUpdate gameUpdate =
+            mapper.treeToValue(msgNode, Message.GameUpdate.class);
+        return new Message(gameUpdate);
 
       default:
         throw new IllegalStateException("Unexpected type: " + typeStr);

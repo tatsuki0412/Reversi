@@ -10,8 +10,6 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import java.io.IOException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * ReversiGame encapsulates the core game logic: maintaining the board state,
@@ -20,9 +18,6 @@ import org.slf4j.LoggerFactory;
 @JsonSerialize(using = ReversiGame.Serializer.class)
 @JsonDeserialize(using = ReversiGame.Deserializer.class)
 public class ReversiGame {
-  private static final Logger logger =
-      LoggerFactory.getLogger(ReversiGame.class);
-
   // The current game board.
   private Board board;
 
@@ -81,6 +76,21 @@ public class ReversiGame {
     // Switch the current player.
     currentPlayer = currentPlayer.opponent();
     return true;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o)
+      return true;
+    if (o == null || getClass() != o.getClass())
+      return false;
+    ReversiGame other = (ReversiGame)o;
+    return currentPlayer == other.currentPlayer && board.equals(other.board);
+  }
+
+  public void loadFrom(ReversiGame o) {
+    this.board = o.board;
+    this.currentPlayer = o.currentPlayer;
   }
 
   // ===================== Serialization Support =====================
