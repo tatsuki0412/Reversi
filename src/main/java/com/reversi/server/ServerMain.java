@@ -2,8 +2,8 @@ package com.reversi.server;
 
 import com.reversi.common.EventBus;
 import com.reversi.common.EventListener;
+import com.reversi.common.LobbyRoom;
 import com.reversi.common.Message;
-import com.reversi.common.Player;
 import com.reversi.common.ReversiGame;
 import com.reversi.server.events.GameStateChange;
 import java.io.*;
@@ -28,7 +28,7 @@ public class ServerMain {
   private Map<String, GameSession> activeGameSessions = new HashMap<>();
 
   private EventBus eventBus = new EventBus();
-  private List<EventListener> listeners = new ArrayList<>();
+  private List<Object> listeners = new ArrayList<>();
 
   public void startServer() {
     // Create event listeners and add them to a list, to prevent gc
@@ -82,33 +82,36 @@ public class ServerMain {
             lobbyRooms.put(roomId, room);
           }
         }
-        room.addClient(handler);
+        room.addPlayer(handler.getID());
         logger.info("Client {} joined room {}", handler.getID(), roomId);
         break;
       }
       case LobbyReady: {
+        Message.LobbyReady lobbyReady = (Message.LobbyReady)msg.getMessage();
+
         // Mark the client as ready
         LobbyRoom clientRoom = null;
         for (LobbyRoom room : lobbyRooms.values()) {
-          if (room.getClients().contains(handler)) {
+          if (room.getPlayers().contains(handler.getID())) {
             clientRoom = room;
             break;
           }
         }
         if (clientRoom != null) {
-          clientRoom.markReady(handler);
+          clientRoom.setReadiness(handler.getID(), lobbyReady.getIsReady());
           logger.info("Client {} is ready in room {}", handler.getID(),
-                      clientRoom.getRoomId());
+                      clientRoom.getRoomName());
+
           if (clientRoom.isReadyToStart()) {
-            List<ClientHandler> players = clientRoom.getClients();
+            List<Integer> players = clientRoom.getPlayers();
 
             if (players.size() == 2) {
-              ClientHandler blackPlayer = players.get(0);
-              ClientHandler whitePlayer = players.get(1);
+              ClientHandler blackPlayer = clients.get(players.get(0));
+              ClientHandler whitePlayer = clients.get(players.get(1));
 
               GameSession gameSession =
                   new GameSession(blackPlayer, whitePlayer);
-              activeGameSessions.put(clientRoom.getRoomId(), gameSession);
+              activeGameSessions.put(clientRoom.getRoomName(), gameSession);
 
               // Notify players that game just started
               blackPlayer.sendMessage(new Message(new Message.Start('B')));
@@ -116,9 +119,9 @@ public class ServerMain {
               eventBus.post(new GameStateChange(gameSession));
 
               logger.info("Game session started for room {}",
-                          clientRoom.getRoomId());
+                          clientRoom.getRoomName());
               synchronized (lobbyRooms) {
-                lobbyRooms.remove(clientRoom.getRoomId());
+                lobbyRooms.remove(clientRoom.getRoomName());
               }
             }
           }
