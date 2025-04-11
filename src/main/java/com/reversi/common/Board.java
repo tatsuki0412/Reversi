@@ -19,16 +19,13 @@ public class Board {
 
   public static final int BOARD_SIZE = 8;
 
-  public enum Status { Empty, Black, White }
-  private Status[][] board;
+  private Player[][] status;
 
   Board() {
-    this.board = new Status[BOARD_SIZE][BOARD_SIZE];
-    for (int i = 0; i < BOARD_SIZE; i++) {
-      for (int j = 0; j < BOARD_SIZE; j++) {
-        board[i][j] = Status.Empty;
-      }
-    }
+    this.status = new Player[BOARD_SIZE][BOARD_SIZE];
+    for (int i = 0; i < BOARD_SIZE; i++)
+      for (int j = 0; j < BOARD_SIZE; j++)
+        status[i][j] = Player.None;
   }
   Board(String str) throws IllegalArgumentException {
     this();
@@ -47,11 +44,11 @@ public class Board {
       for (int j = 0; j < 8; j++) {
         char c = rowLine.charAt(j);
         if (c == 'W')
-          board[i][j] = Status.White;
+          status[i][j] = Player.White;
         else if (c == 'B')
-          board[i][j] = Status.Black;
+          status[i][j] = Player.Black;
         else
-          board[i][j] = Status.Empty;
+          status[i][j] = Player.None;
       }
     }
   }
@@ -61,7 +58,7 @@ public class Board {
     StringBuilder sb = new StringBuilder(BOARD_SIZE * BOARD_SIZE + BOARD_SIZE);
     for (int i = 0; i < BOARD_SIZE; i++) {
       for (int j = 0; j < BOARD_SIZE; j++) {
-        switch (board[i][j]) {
+        switch (status[i][j]) {
         case Black:
           sb.append('B');
           break;
@@ -79,20 +76,20 @@ public class Board {
     return sb.toString();
   }
 
-  public Status get(int row, int col) {
+  public Player get(int row, int col) {
     if (row < 0 || row >= BOARD_SIZE) {
       logger.error("Row {} out of bounds.", row);
-      return Status.Empty;
+      return Player.None;
     }
     if (col < 0 || col >= BOARD_SIZE) {
       logger.error("Col {} out of bounds.", col);
-      return Status.Empty;
+      return Player.None;
     }
 
-    return this.board[row][col];
+    return this.status[row][col];
   }
 
-  public void set(int row, int col, Status status) {
+  public void set(int row, int col, Player status) {
     if (row < 0 || row >= BOARD_SIZE) {
       logger.error("Row {} out of bounds.", row);
       return;
@@ -102,7 +99,7 @@ public class Board {
       return;
     }
 
-    this.board[row][col] = status;
+    this.status[row][col] = status;
   }
 
   public boolean equals(Object obj) {
@@ -112,7 +109,7 @@ public class Board {
 
     for (int i = 0; i < BOARD_SIZE; ++i)
       for (int j = 0; j < BOARD_SIZE; ++j)
-        if (board[i][j] != other.get(i, j))
+        if (status[i][j] != other.get(i, j))
           return false;
     return true;
   }
@@ -120,10 +117,10 @@ public class Board {
   // Factory method to create a init prototype
   public static Board createDefault() {
     Board board = new Board();
-    board.set(3, 3, Status.White);
-    board.set(4, 4, Status.White);
-    board.set(3, 4, Status.Black);
-    board.set(4, 3, Status.Black);
+    board.set(3, 3, Player.White);
+    board.set(4, 4, Player.White);
+    board.set(3, 4, Player.Black);
+    board.set(4, 3, Player.Black);
     return board;
   }
 

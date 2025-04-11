@@ -2,6 +2,8 @@ package com.reversi.server;
 
 import com.reversi.common.Board;
 import com.reversi.common.Message;
+import com.reversi.common.Player;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,12 +31,12 @@ public class GameSession {
     return handler.equals(blackPlayer) || handler.equals(whitePlayer);
   }
 
-  private Board.Status convertPlayer(char player) {
-    return player == 'W' ? Board.Status.White : Board.Status.Black;
+  private Player convertPlayer(char player) {
+    return player == 'W' ? Player.White : Player.Black;
   }
-  private Board.Status getOpponent(Board.Status player) {
-    return player == Board.Status.Black ? Board.Status.White
-                                        : Board.Status.Black;
+  private Player getOpponent(Player player) {
+    return player == Player.Black ? Player.White
+                                        : Player.Black;
   }
 
   public synchronized boolean makeMove(int row, int col, char playerChar) {
@@ -43,8 +45,8 @@ public class GameSession {
     if (!isValidMove(row, col, playerChar))
       return false;
 
-    Board.Status player = convertPlayer(playerChar);
-    Board.Status opponent = getOpponent(player);
+    Player player = convertPlayer(playerChar);
+    Player opponent = getOpponent(player);
 
     board.set(row, col, player);
     for (int[] d : DIRECTIONS) {
@@ -69,10 +71,10 @@ public class GameSession {
   }
 
   public boolean isValidMove(int row, int col, char playerChar) {
-    Board.Status player = convertPlayer(playerChar);
-    Board.Status opponent = getOpponent(player);
+    Player player = convertPlayer(playerChar);
+    Player opponent = getOpponent(player);
 
-    if (!isWithinBounds(row, col) || board.get(row, col) != Board.Status.Empty)
+    if (!isWithinBounds(row, col) || board.get(row, col) != Player.None)
       return false;
     for (int[] d : DIRECTIONS) {
       int r = row + d[0], c = col + d[1];

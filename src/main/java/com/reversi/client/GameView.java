@@ -3,6 +3,7 @@ package com.reversi.client;
 import com.reversi.common.Board;
 import com.reversi.common.EventListener;
 import com.reversi.common.Message;
+import com.reversi.common.Player;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -89,9 +90,9 @@ public class GameView implements EventListener<ServerMessage> {
       for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
           String txt;
-          if (board.get(i, j) == Board.Status.Black)
+          if (board.get(i, j) == Player.Black)
             txt = "B";
-          else if (board.get(i, j) == Board.Status.White)
+          else if (board.get(i, j) == Player.White)
             txt = "W";
           else
             txt = "";

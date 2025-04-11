@@ -2,7 +2,7 @@ package com.reversi.common;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.reversi.common.Board;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 public class BoardTest {
@@ -16,7 +16,7 @@ public class BoardTest {
     Board board = new Board();
     for (int i = 0; i < Board.BOARD_SIZE; i++) {
       for (int j = 0; j < Board.BOARD_SIZE; j++) {
-        assertEquals(Board.Status.Empty, board.get(i, j),
+        assertEquals(Player.None, board.get(i, j),
                      "Expected cell at (" + i + "," + j + ") to be Empty");
       }
     }
@@ -43,21 +43,21 @@ public class BoardTest {
     Board board = new Board(boardString);
 
     // First row: first cell is Black, remaining empty.
-    assertEquals(Board.Status.Black, board.get(0, 0));
+    assertEquals(Player.Black, board.get(0, 0));
     for (int j = 1; j < Board.BOARD_SIZE; j++) {
-      assertEquals(Board.Status.Empty, board.get(0, j));
+      assertEquals(Player.None, board.get(0, j));
     }
 
     // Second row: last cell is White.
     for (int j = 0; j < Board.BOARD_SIZE - 1; j++) {
-      assertEquals(Board.Status.Empty, board.get(1, j));
+      assertEquals(Player.None, board.get(1, j));
     }
-    assertEquals(Board.Status.White, board.get(1, 7));
+    assertEquals(Player.White, board.get(1, 7));
 
     // Remaining rows should be entirely empty.
     for (int i = 2; i < Board.BOARD_SIZE; i++) {
       for (int j = 0; j < Board.BOARD_SIZE; j++) {
-        assertEquals(Board.Status.Empty, board.get(i, j));
+        assertEquals(Player.None, board.get(i, j));
       }
     }
   }
@@ -97,23 +97,9 @@ public class BoardTest {
                          + "........0";
     board = new Board(boardString);
 
-    assertEquals(Board.Status.Black, board.get(0, 0),
-                 "Cell (0,0) should be Black");
-    assertEquals(Board.Status.White, board.get(1, 1),
-                 "Cell (1,1) should be White");
-    assertEquals(Board.Status.Empty, board.get(2, 2),
-                 "Cell (2,2) should be Empty");
-  }
-
-  /**
-   * Verify that after encode to and then decode from a string ,the board
-   * remains the same
-   */
-  @Test
-  public void testSerialization() {
-    String boardString = Board.createDefault().toString();
-    Board board = new Board(boardString);
-    assertTrue(board.equals(Board.createDefault()));
+    assertEquals(Player.Black, board.get(0, 0), "Cell (0,0) should be Black");
+    assertEquals(Player.White, board.get(1, 1), "Cell (1,1) should be White");
+    assertEquals(Player.None, board.get(2, 2), "Cell (2,2) should be Empty");
   }
 
   /**
@@ -126,5 +112,28 @@ public class BoardTest {
     board = Board.createDefault();
     assertTrue(board.equals(Board.createDefault()));
     assertFalse(board.equals(new Board()));
+  }
+
+  /**
+   * Verify that after encode to and then decode from a string ,the board
+   * remains the same
+   */
+  @Test
+  public void testSaveLoad() {
+    String boardString = Board.createDefault().toString();
+    Board board = new Board(boardString);
+    assertTrue(board.equals(Board.createDefault()));
+  }
+
+  @Test
+  public void testJsonSerialization() {
+    ObjectMapper mapper = JacksonObjMapper.get();
+    Board board = Board.createDefault();
+    String json = assertDoesNotThrow(() -> mapper.writeValueAsString(board));
+    assertEquals("", json);
+
+    Board deserialized =
+        assertDoesNotThrow(() -> mapper.readValue(json, Board.class));
+    assertTrue(board.equals(deserialized));
   }
 }

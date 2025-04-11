@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.io.IOException;
 
 class MessageJsonUtil {
-  private static final ObjectMapper objectMapper = new ObjectMapper();
+  private static final ObjectMapper objectMapper = JacksonObjMapper.get();
 
   public static String serialize(Message message) throws Exception {
     // Create a JSON object that has both "type" and "msg" properties.
