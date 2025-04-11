@@ -9,50 +9,125 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * The Board class models an 8x8 board for the game of Reversi.
+ * <p>
+ * It provides functionality for board initialization, move validation,
+ * move execution (including flipping the opponent's pieces), and serialization.
+ * The board is serialized to a string representation and deserialized from the
+ * same format.
+ * </p>
+ */
 @JsonSerialize(using = Board.BoardSerializer.class)
 @JsonDeserialize(using = Board.BoardDeserializer.class)
 public class Board {
   private static final Logger logger = LoggerFactory.getLogger(Board.class);
 
+  /** The dimension of the board (8x8). */
   public static final int BOARD_SIZE = 8;
 
+  /**
+   * Offsets representing all 8 directions (N, NE, E, SE, S, SW, W, NW)
+   * to search for discs that may be captured.
+   */
+  private static final int[][] DIRECTIONS = {
+      {-1, 0}, {-1, 1}, {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}};
+
+  /**
+   * The board state represented as a 2D array of Player values.
+   * Each element indicates which player occupies that position, or Player.None
+   * if empty.
+   */
   private Player[][] status;
 
+  /**
+   * Default constructor. Initializes the board to an empty state.
+   */
   Board() {
     this.status = new Player[BOARD_SIZE][BOARD_SIZE];
-    for (int i = 0; i < BOARD_SIZE; i++)
-      for (int j = 0; j < BOARD_SIZE; j++)
+    for (int i = 0; i < BOARD_SIZE; i++) {
+      for (int j = 0; j < BOARD_SIZE; j++) {
         status[i][j] = Player.None;
+      }
+    }
   }
+
+  /**
+   * Constructs a Board from a String representation.
+   * <p>
+   * Expected format: Eight 8-character rows separated by "0". Each character
+   * represents: <ul> <li>'W' for a White disc</li> <li>'B' for a Black
+   * disc</li> <li>Any other character for an empty cell</li>
+   * </ul>
+   * </p>
+   *
+   * @param str the string representation of the board
+   * @throws IllegalArgumentException if the input format is invalid
+   */
   Board(String str) throws IllegalArgumentException {
     this();
     String[] lines = str.split("0");
-    if (lines.length != 8) {
-      logger.error("Invalid format. input is {}" + str);
-      return;
+    if (lines.length != BOARD_SIZE) {
+      logger.error("Invalid format: expected {} rows but got {}. Input: {}",
+                   BOARD_SIZE, lines.length, str);
+      throw new IllegalArgumentException(
+          "Invalid board format: Incorrect number of rows.");
     }
 
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < BOARD_SIZE; i++) {
       String rowLine = lines[i];
-      if (rowLine.length() != 8) {
-        logger.error("Invalid format. input is {}" + str);
-        return;
+      if (rowLine.length() != BOARD_SIZE) {
+        logger.error(
+            "Invalid format: each row must have {} characters. Input: {}",
+            BOARD_SIZE, str);
+        throw new IllegalArgumentException(
+            "Invalid board format: Incorrect row length.");
       }
-      for (int j = 0; j < 8; j++) {
+      for (int j = 0; j < BOARD_SIZE; j++) {
         char c = rowLine.charAt(j);
-        if (c == 'W')
+        if (c == 'W') {
           status[i][j] = Player.White;
-        else if (c == 'B')
+        } else if (c == 'B') {
           status[i][j] = Player.Black;
-        else
+        } else {
           status[i][j] = Player.None;
+        }
       }
     }
   }
 
+  /**
+   * Factory method that creates a board with the default starting position for
+   * Reversi. <p> The initial configuration places two white discs and two black
+   * discs in the center.
+   * </p>
+   *
+   * @return a Board instance set to the default starting state
+   */
+  public static Board createDefault() {
+    Board board = new Board();
+    board.set(3, 3, Player.White);
+    board.set(4, 4, Player.White);
+    board.set(3, 4, Player.Black);
+    board.set(4, 3, Player.Black);
+    return board;
+  }
+
+  /**
+   * Converts the board to its string representation.
+   * <p>
+   * Each row is converted to a sequence of characters representing the discs:
+   * 'B' for black, 'W' for white, and '.' for an empty cell.
+   * Rows are separated by the delimiter "0".
+   * </p>
+   *
+   * @return the string representation of the board
+   */
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder(BOARD_SIZE * BOARD_SIZE + BOARD_SIZE);
@@ -70,79 +145,228 @@ public class Board {
           break;
         }
       }
-
+      // Separate rows with a '0' delimiter.
       sb.append('0');
     }
     return sb.toString();
   }
 
+  /**
+   * Retrieves the Player at the specified position.
+   *
+   * @param row the row index (0-based)
+   * @param col the column index (0-based)
+   * @return the Player occupying the cell; Player.None if out of bounds or
+   *     empty
+   */
   public Player get(int row, int col) {
     if (row < 0 || row >= BOARD_SIZE) {
       logger.error("Row {} out of bounds.", row);
       return Player.None;
     }
     if (col < 0 || col >= BOARD_SIZE) {
-      logger.error("Col {} out of bounds.", col);
+      logger.error("Column {} out of bounds.", col);
       return Player.None;
     }
-
     return this.status[row][col];
   }
 
+  /**
+   * Sets the specified cell on the board to the given player's disc.
+   *
+   * @param row the row index (0-based)
+   * @param col the column index (0-based)
+   * @param status the player disc to set (or Player.None to clear)
+   */
   public void set(int row, int col, Player status) {
     if (row < 0 || row >= BOARD_SIZE) {
       logger.error("Row {} out of bounds.", row);
       return;
     }
     if (col < 0 || col >= BOARD_SIZE) {
-      logger.error("Col {} out of bounds.", col);
+      logger.error("Column {} out of bounds.", col);
       return;
     }
-
     this.status[row][col] = status;
   }
 
+  /**
+   * Compares this board with another for equality.
+   * <p>
+   * Two boards are considered equal if all corresponding cells have the same
+   * Player value.
+   * </p>
+   *
+   * @param obj the object to compare against
+   * @return true if the boards have identical states; false otherwise
+   */
+  @Override
   public boolean equals(Object obj) {
-    Board other = (Board)obj;
-    if (other == null)
+    if (!(obj instanceof Board)) {
       return false;
-
-    for (int i = 0; i < BOARD_SIZE; ++i)
-      for (int j = 0; j < BOARD_SIZE; ++j)
-        if (status[i][j] != other.get(i, j))
+    }
+    Board other = (Board)obj;
+    for (int i = 0; i < BOARD_SIZE; ++i) {
+      for (int j = 0; j < BOARD_SIZE; ++j) {
+        if (this.status[i][j] != other.get(i, j)) {
           return false;
+        }
+      }
+    }
     return true;
   }
 
-  // Factory method to create a init prototype
-  public static Board createDefault() {
-    Board board = new Board();
-    board.set(3, 3, Player.White);
-    board.set(4, 4, Player.White);
-    board.set(3, 4, Player.Black);
-    board.set(4, 3, Player.Black);
-    return board;
+  /**
+   * Checks whether the specified coordinates are within the bounds of the
+   * board.
+   *
+   * @param row the row index
+   * @param col the column index
+   * @return true if the coordinates are valid; false otherwise
+   */
+  private boolean isWithinBounds(int row, int col) {
+    return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
   }
 
-  // Serialization support
+  /**
+   * Validates whether a move by the specified player at (row, col) is allowed.
+   * <p>
+   * A move is valid if the cell is empty and there is at least one straight
+   * line (in one of the 8 directions) where one or more contiguous opponent
+   * discs are bracketed by the player's disc.
+   * </p>
+   *
+   * @param row the row index (0-based)
+   * @param col the column index (0-based)
+   * @param player the player attempting the move
+   * @return true if the move is legal; false otherwise
+   */
+  public boolean isValidMove(int row, int col, Player player) {
+    Player opponent = player.opponent();
+
+    if (!isWithinBounds(row, col) || get(row, col) != Player.None) {
+      return false;
+    }
+    // Check each direction for a potential capture.
+    for (int[] d : DIRECTIONS) {
+      int r = row + d[0], c = col + d[1];
+      if (!isWithinBounds(r, c) || get(r, c) != opponent) {
+        continue;
+      }
+      // Move further in the same direction.
+      r += d[0];
+      c += d[1];
+      while (isWithinBounds(r, c)) {
+        if (get(r, c) == opponent) {
+          r += d[0];
+          c += d[1];
+        } else if (get(r, c) == player) {
+          return true;
+        } else {
+          break;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Attempts to execute a move for the given player at the specified position.
+   * <p>
+   * This method first validates the move. If valid, it places the player's disc
+   * and flips all the captured opponent discs along each valid direction.
+   * </p>
+   *
+   * @param row the row index (0-based)
+   * @param col the column index (0-based)
+   * @param player the player making the move
+   * @return true if the move was successfully executed; false otherwise
+   */
+  public boolean makeMove(int row, int col, Player player) {
+    if (!isValidMove(row, col, player)) {
+      return false;
+    }
+
+    Player opponent = player.opponent();
+    // Place the player's disc at the specified location.
+    set(row, col, player);
+
+    // Process all directions to determine if any opponent discs can be
+    // captured.
+    for (int[] d : DIRECTIONS) {
+      List<int[]> discsToFlip = new ArrayList<>();
+      int r = row + d[0], c = col + d[1];
+      // Accumulate positions of consecutive opponent discs.
+      while (isWithinBounds(r, c) && get(r, c) == opponent) {
+        discsToFlip.add(new int[] {r, c});
+        r += d[0];
+        c += d[1];
+      }
+      // If the sequence is bounded by a disc belonging to the current player,
+      // all intermediate opponent discs are captured.
+      if (isWithinBounds(r, c) && get(r, c) == player) {
+        for (int[] pos : discsToFlip) {
+          set(pos[0], pos[1], player);
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Returns a list of all valid moves for the specified player.
+   * <p>
+   * Each move is represented as an integer array of size 2, where the first
+   * element is the row index and the second is the column index.
+   * </p>
+   *
+   * @param player the player for whom valid moves are determined
+   * @return a list of valid moves, where each move is represented as an int
+   *     array [row, col]
+   */
+  public List<int[]> getValidMoves(Player player) {
+    List<int[]> validMoves = new ArrayList<>();
+    for (int row = 0; row < BOARD_SIZE; row++) {
+      for (int col = 0; col < BOARD_SIZE; col++) {
+        if (isValidMove(row, col, player)) {
+          validMoves.add(new int[] {row, col});
+        }
+      }
+    }
+    return validMoves;
+  }
+
+  // ===================== Serialization Support =====================
+
+  /**
+   * Custom serializer for the Board class.
+   * <p>
+   * Serializes the board using its string representation.
+   * </p>
+   */
   public static class BoardSerializer extends JsonSerializer<Board> {
     @Override
     public void serialize(Board board, JsonGenerator gen,
                           SerializerProvider serializers) throws IOException {
-      // Serialize the board by converting it to its string representation.
       gen.writeString(board.toString());
     }
   }
+
+  /**
+   * Custom deserializer for the Board class.
+   * <p>
+   * Expects the board to be represented as a single string value.
+   * </p>
+   */
   public static class BoardDeserializer extends JsonDeserializer<Board> {
     @Override
     public Board deserialize(JsonParser p, DeserializationContext ctxt)
         throws IOException {
-      // Expect the board to be represented as a single String value.
       String boardStr = p.getValueAsString();
       try {
         return new Board(boardStr);
       } catch (IllegalArgumentException e) {
-        // You might want to wrap or rethrow exceptions in a real application.
+        // Wrap the exception into an IOException for Jackson to handle.
         throw new IOException("Failed to deserialize Board: " + e.getMessage(),
                               e);
       }

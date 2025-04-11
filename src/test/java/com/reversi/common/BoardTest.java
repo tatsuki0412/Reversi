@@ -3,6 +3,7 @@ package com.reversi.common;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 public class BoardTest {
@@ -29,8 +30,8 @@ public class BoardTest {
   @Test
   public void testStringConstructorValid() {
     // Create a board string with a mixture of empty, Black, and White cells.
-    // Here, row 0: Black at position 0, rest empty; row 1: White at position 7,
-    // rest empty; other rows all empty.
+    // Row 0: Black at position 0, rest empty; row 1: White at position 7, rest
+    // empty; remaining rows empty.
     String boardString = "B.......0"
                          + ".......W0"
                          + "........0"
@@ -80,13 +81,12 @@ public class BoardTest {
   }
 
   /**
-   * Verify that the at method returns the correct status when indexes are
+   * Verify that the get method returns the correct status when indexes are
    * within bounds.
    */
   @Test
   public void testAtValidIndices() {
-    Board board = new Board();
-    // Manually set a couple of cells (via string constructor for convenience)
+    // Using string constructor for convenience.
     String boardString = "B.......0"
                          + ".W......0"
                          + "........0"
@@ -95,7 +95,7 @@ public class BoardTest {
                          + "........0"
                          + "........0"
                          + "........0";
-    board = new Board(boardString);
+    Board board = new Board(boardString);
 
     assertEquals(Player.Black, board.get(0, 0), "Cell (0,0) should be Black");
     assertEquals(Player.White, board.get(1, 1), "Cell (1,1) should be White");
@@ -103,7 +103,7 @@ public class BoardTest {
   }
 
   /**
-   * Verify the equals method
+   * Verify the equals method.
    */
   @Test
   public void testEquals() {
@@ -115,8 +115,8 @@ public class BoardTest {
   }
 
   /**
-   * Verify that after encode to and then decode from a string ,the board
-   * remains the same
+   * Verify that encoding to and then decoding from a string preserves the board
+   * state.
    */
   @Test
   public void testSaveLoad() {
@@ -125,15 +125,109 @@ public class BoardTest {
     assertTrue(board.equals(Board.createDefault()));
   }
 
+  /**
+   * Verify that JSON serialization and deserialization produce an equivalent
+   * board.
+   */
   @Test
   public void testJsonSerialization() {
     ObjectMapper mapper = JacksonObjMapper.get();
     Board board = Board.createDefault();
     String json = assertDoesNotThrow(() -> mapper.writeValueAsString(board));
-    assertEquals("", json);
-
     Board deserialized =
         assertDoesNotThrow(() -> mapper.readValue(json, Board.class));
     assertTrue(board.equals(deserialized));
+  }
+
+  /**
+   * Verify the move validation logic using the isValidMove method.
+   * <p>
+   * For the default board, a common valid move for Black is at (2,3)
+   * and for White is at (2,4). The test also covers invalid moves due to
+   * occupied cells and out-of-bounds positions.
+   * </p>
+   */
+  @Test
+  public void testIsValidMove() {
+    Board board = Board.createDefault();
+
+    // For Black, the move at (2,3) should be valid.
+    assertTrue(board.isValidMove(2, 3, Player.Black),
+               "Expected (2,3) to be a valid move for Black.");
+
+    // For White, the move at (2,4) should be valid.
+    assertTrue(board.isValidMove(2, 4, Player.White),
+               "Expected (2,4) to be a valid move for White.");
+
+    // Attempt a move on an already occupied cell should be invalid.
+    assertFalse(
+        board.isValidMove(3, 3, Player.Black),
+        "Expected move at (3,3) to be invalid since the cell is occupied.");
+
+    // Out-of-bound moves should also be invalid.
+    assertFalse(board.isValidMove(-1, 0, Player.Black),
+                "Expected move (-1,0) to be invalid due to out-of-bounds row.");
+    assertFalse(board.isValidMove(0, Board.BOARD_SIZE, Player.White),
+                "Expected move (0," + Board.BOARD_SIZE +
+                    ") to be invalid due to out-of-bounds column.");
+  }
+
+  /**
+   * Verify that making a move with makeMove correctly updates the board state,
+   * including flipping the opponent's discs.
+   */
+  @Test
+  public void testMakeMove() {
+    Board board = Board.createDefault();
+
+    // Black makes a valid move at (2,3). This should flip the White disc at
+    // (3,3).
+    assertTrue(board.makeMove(2, 3, Player.Black),
+               "Expected move (2,3) by Black to be successful.");
+    // Check that the move was executed.
+    assertEquals(Player.Black, board.get(2, 3),
+                 "Expected (2,3) to now hold a Black disc.");
+    // Verify that the opponent disc at (3,3) flips to Black.
+    assertEquals(Player.Black, board.get(3, 3),
+                 "Expected (3,3) to flip to Black after the move.");
+
+    // Attempt to make an illegal move (placing on an already occupied cell).
+    assertFalse(board.makeMove(2, 3, Player.White),
+                "Expected move at (2,3) by White to fail because the cell is " +
+                "occupied.");
+  }
+
+  /**
+   * Verify that getValidMoves returns the correct list of valid moves for a
+   * player. <p> For the default board, it is expected that both Black and White
+   * have four valid moves. The test specifically checks for the presence of a
+   * known valid move.
+   * </p>
+   */
+  @Test
+  public void testGetValidMoves() {
+    Board board = Board.createDefault();
+
+    // For a default board, Black is expected to have 4 valid moves.
+    List<int[]> blackValidMoves = board.getValidMoves(Player.Black);
+    assertEquals(4, blackValidMoves.size(),
+                 "Expected 4 valid moves for Black on a default board.");
+
+    // Check that one known valid move (2,3) is present in the list.
+    boolean found = false;
+    for (int[] move : blackValidMoves) {
+      if (move[0] == 2 && move[1] == 3) {
+        found = true;
+        break;
+      }
+    }
+    assertTrue(
+        found,
+        "Expected to find the valid move (2,3) for Black on a default board.");
+
+    // Similarly, White should have 4 valid moves.
+    List<int[]> whiteValidMoves = board.getValidMoves(Player.White);
+    assertEquals(4, whiteValidMoves.size(),
+                 "Expected 4 valid moves for White on a default board.");
   }
 }
