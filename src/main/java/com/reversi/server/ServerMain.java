@@ -10,6 +10,9 @@ import com.reversi.server.events.GameStateChange;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,8 +34,11 @@ public class ServerMain {
   private EventBus eventBus = new EventBus();
   private List<Object> listeners = new ArrayList<>();
 
+  // ExecutorService for managing client threads using a thread pool
+  private ExecutorService clientThreadPool = Executors.newCachedThreadPool();
+
   public void startServer() {
-    // Create event listeners and add them to a list, to prevent gc
+    // Create event listeners and add them to a list to prevent GC
     var clientListener = this.new ClientMessageListener();
     var gameListener = this.new GameSessionUpdateListener();
     listeners.add(clientListener);
@@ -47,21 +53,19 @@ public class ServerMain {
         int clientId = genClientId();
         ClientHandler handler = new ClientHandler(clientId, socket, eventBus);
         synchronized (clients) { clients.put(clientId, handler); }
-        handler.start();
+        // Submit the client handler as a task to the thread pool
+        clientThreadPool.submit(handler);
         logger.info("Client connected. Total clients: {}", clients.size());
       }
     } catch (IOException e) {
       logger.error("Error starting server", e);
+    } finally {
+      clientThreadPool.shutdown();
     }
   }
 
-  private static final Random rand = new Random();
-  private int genClientId() {
-    int id = 0;
-    while (clients.containsKey(id))
-      id = rand.nextInt();
-    return id;
-  }
+  private static final AtomicInteger clientCounter = new AtomicInteger(0);
+  private int genClientId() { return clientCounter.incrementAndGet(); }
 
   // ---------------------------------------------------------------
   // EventListener ClientMessageListener
@@ -83,8 +87,8 @@ public class ServerMain {
             lobbyRooms.put(roomId, room);
           }
         }
-        room.addPlayer(new PlayerStatus(handler.getID()));
-        logger.info("Client {} joined room {}", handler.getID(), roomId);
+        room.addPlayer(new PlayerStatus(handler.getClientId()));
+        logger.info("Client {} joined room {}", handler.getClientId(), roomId);
         break;
       }
       case LobbyReady: {
@@ -93,16 +97,16 @@ public class ServerMain {
         // Mark the client as ready
         LobbyRoom clientRoom = null;
         for (LobbyRoom room : lobbyRooms.values()) {
-          if (room.contains(handler.getID())) {
+          if (room.contains(handler.getClientId())) {
             clientRoom = room;
             break;
           }
         }
         if (clientRoom != null) {
-          var status = clientRoom.getPlayerStatus(handler.getID());
+          var status = clientRoom.getPlayerStatus(handler.getClientId());
           status.setReady(lobbyReady.getIsReady());
-          clientRoom.updatePlayerStatus(handler.getID(), status);
-          logger.info("Client {} is ready in room {}", handler.getID(),
+          clientRoom.updatePlayerStatus(handler.getClientId(), status);
+          logger.info("Client {} is ready in room {}", handler.getClientId(),
                       clientRoom.getRoomName());
 
           if (clientRoom.isReadyToStart()) {
@@ -153,7 +157,7 @@ public class ServerMain {
         } else {
           logger.error(
               "Received move from client {} with no active game session.",
-              handler.getID());
+              handler.getClientId());
         }
         break;
       }

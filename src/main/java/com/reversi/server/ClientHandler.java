@@ -8,7 +8,7 @@ import java.net.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ClientHandler extends Thread {
+public class ClientHandler implements Runnable {
   private static final Logger logger =
       LoggerFactory.getLogger(ClientHandler.class);
 
@@ -23,7 +23,7 @@ public class ClientHandler extends Thread {
     this.socket = s;
     this.eventBus = eventBus;
 
-    // Establish in/out stream with client
+    // Establish input/output stream with the client
     try {
       out = new PrintWriter(socket.getOutputStream(), true);
       in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -32,7 +32,7 @@ public class ClientHandler extends Thread {
     }
   }
 
-  public int getID() { return id; }
+  public int getClientId() { return id; }
 
   public void sendMessage(Message msg) {
     try {
@@ -42,20 +42,19 @@ public class ClientHandler extends Thread {
     }
   }
 
+  @Override
   public void run() {
     try {
       String line;
       // Listen for incoming messages from the client.
       while ((line = in.readLine()) != null) {
         logger.info("Received from client {}: {}", id, line);
-
         Message msg;
         try {
           msg = JacksonObjMapper.get().readValue(line, Message.class);
           eventBus.post(new ClientMessage(msg, this));
         } catch (Exception e) {
-          logger.error("Failed to process reveived data: {}\n{}", line,
-                       e.getStackTrace());
+          logger.error("Failed to process received data: {}\n", line, e);
         }
       }
     } catch (IOException e) {

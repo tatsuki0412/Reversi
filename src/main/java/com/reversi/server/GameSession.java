@@ -19,8 +19,8 @@ public class GameSession {
     return handler.equals(blackPlayer) || handler.equals(whitePlayer);
   }
 
-  public int getBlackId() { return blackPlayer.getID(); }
-  public int getWhiteId() { return whitePlayer.getID(); }
+  public int getBlackId() { return blackPlayer.getClientId(); }
+  public int getWhiteId() { return whitePlayer.getClientId(); }
 
   public Player getClientPlayer(ClientHandler handler) {
     if (handler == blackPlayer)
