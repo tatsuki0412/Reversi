@@ -3,6 +3,8 @@ package com.reversi.common;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 public class MessageTest {
@@ -10,6 +12,7 @@ public class MessageTest {
     var mapper = JacksonObjMapper.get();
     return mapper.writeValueAsString(m);
   }
+
   static Message deserialize(String s) throws IOException {
     var mapper = JacksonObjMapper.get();
     return mapper.readValue(s, Message.class);
@@ -97,12 +100,10 @@ public class MessageTest {
     assertEquals(Message.Type.LobbyReady, deserialized.getType(),
                  "Message type should be LobbyReady");
 
-    // For LobbyReady there is no field to assert; testing successful
-    // deserialization is sufficient.
     Message.LobbyReady lobbyReadyDeserialized =
         (Message.LobbyReady)deserialized.getMessage();
-    assertEquals(true, lobbyReadyDeserialized.getIsReady(),
-                 "Ready status does not match");
+    assertTrue(lobbyReadyDeserialized.getIsReady(),
+               "Ready status does not match");
   }
 
   @Test
@@ -110,10 +111,10 @@ public class MessageTest {
     var game = new ReversiGame();
 
     Message.GameUpdate gameUpdate = new Message.GameUpdate(game);
-    var msg = new Message(gameUpdate);
+    Message msg = new Message(gameUpdate);
 
     String json = assertDoesNotThrow(() -> serialize(msg));
-    assertNotNull(json, "Serialized JSON for LobbyReady should not be null");
+    assertNotNull(json, "Serialized JSON for GameUpdate should not be null");
 
     Message deserialized = assertDoesNotThrow(() -> deserialize(json));
     assertEquals(Message.Type.GameUpdate, deserialized.getType(),
@@ -122,5 +123,51 @@ public class MessageTest {
     Message.GameUpdate deserializedMessage =
         (Message.GameUpdate)deserialized.getMessage();
     assertTrue(game.equals(deserializedMessage.getGame()));
+  }
+
+  @Test
+  void testSerializeDeserializeLobbyCreate() {
+    // Create a LobbyRoom instance to be used in LobbyCreate
+    LobbyRoom room = new LobbyRoom("TestRoom");
+    Message.LobbyCreate lobbyCreate = new Message.LobbyCreate(room);
+    Message msg = new Message(lobbyCreate);
+
+    String json = assertDoesNotThrow(() -> serialize(msg));
+    assertNotNull(json, "Serialized JSON for LobbyCreate should not be null");
+
+    Message deserialized = assertDoesNotThrow(() -> deserialize(json), json);
+    assertEquals(Message.Type.LobbyCreate, deserialized.getType(),
+                 "Message type should be LobbyCreate");
+
+    Message.LobbyCreate lobbyCreateDeserialized =
+        (Message.LobbyCreate)deserialized.getMessage();
+    assertEquals("TestRoom", lobbyCreateDeserialized.getRoom().getRoomName(),
+                 "LobbyRoom name does not match");
+  }
+
+  @Test
+  void testSerializeDeserializeLobbyUpdate() {
+    // Create a map of LobbyRooms for LobbyUpdate
+    Map<String, LobbyRoom> lobbyRooms = new HashMap<>();
+    LobbyRoom room1 = new LobbyRoom("Room1");
+    lobbyRooms.put("room1", room1);
+    Message.LobbyUpdate lobbyUpdate = new Message.LobbyUpdate(lobbyRooms);
+    Message msg = new Message(lobbyUpdate);
+
+    String json = assertDoesNotThrow(() -> serialize(msg));
+    assertNotNull(json, "Serialized JSON for LobbyUpdate should not be null");
+
+    Message deserialized = assertDoesNotThrow(() -> deserialize(json), json);
+    assertEquals(Message.Type.LobbyUpdate, deserialized.getType(),
+                 "Message type should be LobbyUpdate");
+
+    Message.LobbyUpdate lobbyUpdateDeserialized =
+        (Message.LobbyUpdate)deserialized.getMessage();
+    Map<String, LobbyRoom> deserializedRooms =
+        lobbyUpdateDeserialized.getLobbyRooms();
+    assertTrue(deserializedRooms.containsKey("room1"),
+               "LobbyUpdate should contain key 'room1'");
+    assertEquals("Room1", deserializedRooms.get("room1").getRoomName(),
+                 "LobbyRoom name does not match");
   }
 }

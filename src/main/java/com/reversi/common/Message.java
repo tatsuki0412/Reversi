@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import java.io.IOException;
+import java.util.Map;
 
 @JsonSerialize(using = Message.Serializer.class)
 @JsonDeserialize(using = Message.Deserializer.class)
@@ -25,6 +26,15 @@ public class Message {
       this.roomNumber = roomNumber;
     }
     public String getRoomNumber() { return roomNumber; }
+  }
+
+  public static class LobbyCreate {
+    private final LobbyRoom room;
+    @JsonCreator
+    public LobbyCreate(@JsonProperty("room") LobbyRoom room) {
+      this.room = room;
+    }
+    public LobbyRoom getRoom() { return room; }
   }
 
   public static class LobbyReady {
@@ -75,6 +85,16 @@ public class Message {
     public ReversiGame getGame() { return game; }
   }
 
+  public static class LobbyUpdate {
+    private final Map<String, LobbyRoom> lobbyRooms;
+    @JsonCreator
+    public LobbyUpdate(@JsonProperty("lobbyRooms")
+                       Map<String, LobbyRoom> lobbyRooms) {
+      this.lobbyRooms = lobbyRooms;
+    }
+    public Map<String, LobbyRoom> getLobbyRooms() { return lobbyRooms; }
+  }
+
   // Tagged union storage
   private final Object msg;
   private final Type type;
@@ -86,7 +106,9 @@ public class Message {
     Board,
     LobbyJoin,
     LobbyReady,
-    GameUpdate
+    GameUpdate,
+    LobbyCreate,
+    LobbyUpdate
   }
 
   // Constructors for different message types.
@@ -113,6 +135,14 @@ public class Message {
   public Message(GameUpdate msg) {
     this.msg = msg;
     this.type = Type.GameUpdate;
+  }
+  public Message(LobbyCreate msg) {
+    this.msg = msg;
+    this.type = Type.LobbyCreate;
+  }
+  public Message(LobbyUpdate msg) {
+    this.msg = msg;
+    this.type = Type.LobbyUpdate;
   }
 
   // No-arg constructor for Jackson
@@ -159,32 +189,38 @@ public class Message {
 
       switch (type) {
       case Move:
-        Message.Move move = mapper.treeToValue(msgNode, Message.Move.class);
+        Move move = mapper.treeToValue(msgNode, Move.class);
         return new Message(move);
 
       case Invalid:
-        Message.Invalid invalid =
-            mapper.treeToValue(msgNode, Message.Invalid.class);
+        Invalid invalid = mapper.treeToValue(msgNode, Invalid.class);
         return new Message(invalid);
 
       case Start:
-        Message.Start start = mapper.treeToValue(msgNode, Message.Start.class);
+        Start start = mapper.treeToValue(msgNode, Start.class);
         return new Message(start);
 
       case LobbyJoin:
-        Message.LobbyJoin lobbyJoin =
-            mapper.treeToValue(msgNode, Message.LobbyJoin.class);
+        LobbyJoin lobbyJoin = mapper.treeToValue(msgNode, LobbyJoin.class);
         return new Message(lobbyJoin);
 
       case LobbyReady:
-        Message.LobbyReady lobbyReady =
-            mapper.treeToValue(msgNode, Message.LobbyReady.class);
+        LobbyReady lobbyReady = mapper.treeToValue(msgNode, LobbyReady.class);
         return new Message(lobbyReady);
 
       case GameUpdate:
-        Message.GameUpdate gameUpdate =
-            mapper.treeToValue(msgNode, Message.GameUpdate.class);
+        GameUpdate gameUpdate = mapper.treeToValue(msgNode, GameUpdate.class);
         return new Message(gameUpdate);
+
+      case LobbyCreate:
+        LobbyCreate lobbyCreate =
+            mapper.treeToValue(msgNode, LobbyCreate.class);
+        return new Message(lobbyCreate);
+
+      case LobbyUpdate:
+        LobbyUpdate lobbyUpdate =
+            mapper.treeToValue(msgNode, LobbyUpdate.class);
+        return new Message(lobbyUpdate);
 
       default:
         throw new IllegalStateException("Unexpected type: " + typeStr);

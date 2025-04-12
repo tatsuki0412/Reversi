@@ -85,7 +85,7 @@ public class SessionHub {
         }
         if (clientRoom != null) {
           var status = clientRoom.getPlayerStatus(handler.getClientId());
-          status.setReady(lobbyReady.getIsReady());
+          status.setReadiness(lobbyReady.getIsReady());
           clientRoom.updatePlayerStatus(handler.getClientId(), status);
           logger.info("Client {} is ready in room {}", handler.getClientId(),
                       clientRoom.getRoomName());

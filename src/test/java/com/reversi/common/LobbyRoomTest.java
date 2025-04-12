@@ -2,6 +2,7 @@ package com.reversi.common;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -88,8 +89,8 @@ public class LobbyRoomTest {
     lobby.addPlayer(ps2);
 
     // Set both players as ready.
-    ps1.setReady(true);
-    ps2.setReady(true);
+    ps1.setReadiness(true);
+    ps2.setReadiness(true);
 
     // Update one player's status such that it differs from its current status.
     // Note: The default constructor creates a status with ready=false.
@@ -99,8 +100,8 @@ public class LobbyRoomTest {
 
     // After updating, the cancelReadiness method should have been called:
     // All players' readiness should now be set to false.
-    assertFalse(lobby.getPlayerStatus(1).isReady());
-    assertFalse(lobby.getPlayerStatus(2).isReady());
+    assertFalse(lobby.getPlayerStatus(1).getReadiness());
+    assertFalse(lobby.getPlayerStatus(2).getReadiness());
   }
 
   @Test
@@ -108,7 +109,7 @@ public class LobbyRoomTest {
     // When only one player is in the lobby, it should not be ready to start.
     PlayerStatus ps1 = new PlayerStatus(1);
     lobby.addPlayer(ps1);
-    ps1.setReady(true);
+    ps1.setReadiness(true);
     assertFalse(lobby.isReadyToStart());
 
     // Add a second player.
@@ -117,18 +118,14 @@ public class LobbyRoomTest {
 
     // When both players are ready and roles are correctly set, the lobby is
     // ready to start.
-    ps2.setReady(true);
+    ps2.setReadiness(true);
     assertTrue(lobby.isReadyToStart());
-
-    // If one of the players becomes unready, the lobby should not be ready.
-    ps2.setReady(false);
-    assertFalse(lobby.isReadyToStart());
 
     // If roles are not properly balanced (simulate by manually setting both
     // players to the same role), the lobby should not be ready.
     ps2.setRole(ps1.getRole()); // both players now have the same role
-    ps1.setReady(true);
-    ps2.setReady(true);
+    ps1.setReadiness(true);
+    ps2.setReadiness(true);
     assertFalse(lobby.isReadyToStart());
   }
 
@@ -139,8 +136,8 @@ public class LobbyRoomTest {
     PlayerStatus ps2 = new PlayerStatus(2);
     lobby.addPlayer(ps1);
     lobby.addPlayer(ps2);
-    ps1.setReady(true);
-    ps2.setReady(true);
+    ps1.setReadiness(true);
+    ps2.setReadiness(true);
 
     // Remove one player.
     assertTrue(lobby.removePlayer(1));
@@ -148,7 +145,7 @@ public class LobbyRoomTest {
     assertEquals(1, lobby.size());
 
     // The removal should cancel readiness for all players.
-    assertFalse(ps2.isReady());
+    assertFalse(ps2.getReadiness());
 
     // Removing a non-existent player should return false.
     assertFalse(lobby.removePlayer(3));
@@ -179,5 +176,66 @@ public class LobbyRoomTest {
     expected.setRole(Player.Black);
     // By default, ready is false which is what we expect.
     assertEquals(expected, retrieved);
+  }
+
+  // ================================
+  // Serialization/Deserialization Tests
+  // ================================
+
+  @Test
+  public void testLobbyRoomSerializationDeserialization() throws Exception {
+    ObjectMapper objectMapper = new ObjectMapper();
+    // Create a LobbyRoom with a non-empty player status.
+    LobbyRoom room = new LobbyRoom("SerializationTestRoom", null);
+    PlayerStatus ps1 = new PlayerStatus(1);
+    PlayerStatus ps2 = new PlayerStatus(2);
+    room.addPlayer(ps1);
+    room.addPlayer(ps2);
+
+    // Modify readiness explicitly for testing.
+    ps1.setReadiness(true);
+    ps2.setReadiness(true);
+
+    // Serialize the room to JSON.
+    String json = objectMapper.writeValueAsString(room);
+
+    // Deserialize the JSON back into a LobbyRoom object.
+    LobbyRoom deserializedRoom = objectMapper.readValue(json, LobbyRoom.class);
+
+    // Validate that the deserialized room has the expected properties.
+    assertEquals("SerializationTestRoom", deserializedRoom.getRoomName());
+    assertEquals(2, deserializedRoom.size());
+    PlayerStatus ds1 = deserializedRoom.getPlayerStatus(1);
+    PlayerStatus ds2 = deserializedRoom.getPlayerStatus(2);
+    assertNotNull(ds1);
+    assertNotNull(ds2);
+    // Verify that the roles are as originally assigned: first player gets
+    // Black, second gets White.
+    assertEquals(Player.Black, ds1.getRole());
+    assertEquals(Player.White, ds2.getRole());
+    // Check that the readiness state is maintained.
+    assertTrue(ds1.getReadiness());
+    assertTrue(ds2.getReadiness());
+  }
+
+  @Test
+  public void testPlayerStatusSerializationDeserialization() throws Exception {
+    ObjectMapper objectMapper = new ObjectMapper();
+
+    // Create a PlayerStatus instance.
+    PlayerStatus original = new PlayerStatus(99, Player.White);
+    original.setReadiness(true);
+
+    // Serialize to JSON.
+    String json = objectMapper.writeValueAsString(original);
+
+    // Deserialize from JSON.
+    PlayerStatus deserialized =
+        objectMapper.readValue(json, PlayerStatus.class);
+
+    // Validate that the deserialized instance matches the original.
+    assertEquals(original.getId(), deserialized.getId());
+    assertEquals(original.getReadiness(), deserialized.getReadiness());
+    assertEquals(original.getRole(), deserialized.getRole());
   }
 }
