@@ -8,9 +8,9 @@ import java.net.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ClientHandler implements Runnable {
+public class ClientSocket implements Runnable {
   private static final Logger logger =
-      LoggerFactory.getLogger(ClientHandler.class);
+      LoggerFactory.getLogger(ClientSocket.class);
 
   private Socket socket;
   private PrintWriter out;
@@ -18,7 +18,7 @@ public class ClientHandler implements Runnable {
   private EventBus eventBus;
   private int id;
 
-  public ClientHandler(int id, Socket s, EventBus eventBus) {
+  public ClientSocket(int id, Socket s, EventBus eventBus) {
     this.id = id;
     this.socket = s;
     this.eventBus = eventBus;

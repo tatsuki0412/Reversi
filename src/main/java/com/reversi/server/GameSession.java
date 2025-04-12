@@ -5,24 +5,24 @@ import com.reversi.common.ReversiGame;
 
 public class GameSession {
   private ReversiGame game;
-  private ClientHandler blackPlayer;
-  private ClientHandler whitePlayer;
+  private ClientSocket blackPlayer;
+  private ClientSocket whitePlayer;
 
-  public GameSession(ClientHandler black, ClientHandler white) {
+  public GameSession(ClientSocket black, ClientSocket white) {
     this.game = new ReversiGame();
     this.blackPlayer = black;
     this.whitePlayer = white;
   }
 
   // Helper method to check if a client is part of this game.
-  public boolean containsClient(ClientHandler handler) {
+  public boolean containsClient(ClientSocket handler) {
     return handler.equals(blackPlayer) || handler.equals(whitePlayer);
   }
 
   public int getBlackId() { return blackPlayer.getClientId(); }
   public int getWhiteId() { return whitePlayer.getClientId(); }
 
-  public Player getClientPlayer(ClientHandler handler) {
+  public Player getClientPlayer(ClientSocket handler) {
     if (handler == blackPlayer)
       return Player.Black;
     else if (handler == whitePlayer)
@@ -31,7 +31,7 @@ public class GameSession {
       return Player.None;
   }
 
-  public synchronized boolean makeMove(int row, int col, ClientHandler client) {
+  public synchronized boolean makeMove(int row, int col, ClientSocket client) {
     Player player = getClientPlayer(client);
     if (player != game.getCurrentPlayer())
       return false;
@@ -39,7 +39,7 @@ public class GameSession {
     return game.makeMove(row, col);
   }
 
-  public boolean isValidMove(int row, int col, ClientHandler client) {
+  public boolean isValidMove(int row, int col, ClientSocket client) {
     Player player = getClientPlayer(client);
     if (player != game.getCurrentPlayer())
       return false;

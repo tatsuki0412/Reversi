@@ -5,9 +5,9 @@ import com.reversi.common.Message;
 
 public class ClientMessage extends Event {
   private final Message msg;
-  private final ClientHandler handler; // handler to which this event comes from
+  private final ClientSocket handler; // handler to which this event comes from
 
-  ClientMessage(Message msg, ClientHandler handler) {
+  ClientMessage(Message msg, ClientSocket handler) {
     super();
     this.msg = msg;
     this.handler = handler;
@@ -15,5 +15,5 @@ public class ClientMessage extends Event {
 
   public Message getMessage() { return this.msg; }
 
-  public ClientHandler getHandler() { return this.handler; }
+  public ClientSocket getHandler() { return this.handler; }
 }
