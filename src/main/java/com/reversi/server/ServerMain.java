@@ -93,7 +93,7 @@ public class ServerMain {
         // Mark the client as ready
         LobbyRoom clientRoom = null;
         for (LobbyRoom room : lobbyRooms.values()) {
-          if (room.getPlayers().contains(handler.getID())) {
+          if (room.contains(handler.getID())) {
             clientRoom = room;
             break;
           }
@@ -106,11 +106,11 @@ public class ServerMain {
                       clientRoom.getRoomName());
 
           if (clientRoom.isReadyToStart()) {
-            List<Integer> players = clientRoom.getPlayers();
+            var players = clientRoom.getPlayers().keySet().toArray();
 
-            if (players.size() == 2) {
-              ClientHandler blackPlayer = clients.get(players.get(0));
-              ClientHandler whitePlayer = clients.get(players.get(1));
+            if (players.length == 2) {
+              ClientHandler blackPlayer = clients.get(players[0]);
+              ClientHandler whitePlayer = clients.get(players[1]);
 
               GameSession gameSession =
                   new GameSession(blackPlayer, whitePlayer);
