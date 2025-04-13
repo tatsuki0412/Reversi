@@ -43,12 +43,23 @@ public class SessionHub {
    */
   public void registerClient(ClientSocket client) {
     synchronized (clients) { clients.put(client.getClientId(), client); }
+    sendLobbyUpdate(client);
   }
 
   public EventBus getEventBus() { return this.eventBus; }
 
-  // --- Inner classes for event listeners ---
+  private void sendLobbyUpdate(ClientSocket client) {
+    var message = new Message(new Message.LobbyUpdate(lobbyRooms));
 
+    if (client != null)
+      client.sendMessage(message);
+    else {
+      for (var it : clients.values())
+        it.sendMessage(message);
+    }
+  }
+
+  // --- Inner classes for event listeners ---
   class ClientMessageListener implements EventListener<ClientMessage> {
     @Override
     public void onEvent(ClientMessage e) {
@@ -56,62 +67,57 @@ public class SessionHub {
       ClientSocket handler = e.getHandler();
 
       switch (msg.getType()) {
+      case LobbyCreate: {
+        Message.LobbyCreate lobbyCreate = (Message.LobbyCreate)msg.getMessage();
+        LobbyRoom room = lobbyCreate.getRoom();
+        room.addPlayer(new PlayerStatus(handler.getClientId()));
+        synchronized (lobbyRooms) {
+          if (lobbyRooms.containsKey(room.getRoomName())) {
+            handler.sendMessage(new Message(new Message.Invalid(
+                "Room " + room.getRoomName() + " already exists.")));
+            break;
+          }
+          lobbyRooms.put(room.getRoomName(), room);
+        }
+
+        sendLobbyUpdate(null);
+        logger.info("Client {} created room {}", handler.getClientId(),
+                    room.getRoomName());
+        break;
+      }
       case LobbyJoin: {
         Message.LobbyJoin lobbyJoin = (Message.LobbyJoin)msg.getMessage();
         String roomId = lobbyJoin.getRoomNumber();
         LobbyRoom room;
-        synchronized (lobbyRooms) {
-          room = lobbyRooms.get(roomId);
-          if (room == null) {
-            room = new LobbyRoom(roomId);
-            lobbyRooms.put(roomId, room);
-          }
+        synchronized (lobbyRooms) { room = lobbyRooms.get(roomId); }
+        if (room == null) {
+          handler.sendMessage(
+              new Message(new Message.Invalid("Room " + roomId + " invalid.")));
+          break;
         }
-        room.addPlayer(new PlayerStatus(handler.getClientId()));
-        logger.info("Client {} joined room {}", handler.getClientId(), roomId);
-        break;
-      }
-      case LobbyReady: {
-        Message.LobbyReady lobbyReady = (Message.LobbyReady)msg.getMessage();
-        LobbyRoom clientRoom = null;
-        // Find the lobby room that contains the client.
-        synchronized (lobbyRooms) {
-          for (LobbyRoom room : lobbyRooms.values()) {
-            if (room.contains(handler.getClientId())) {
-              clientRoom = room;
-              break;
-            }
-          }
-        }
-        if (clientRoom != null) {
-          var status = clientRoom.getPlayerStatus(handler.getClientId());
-          status.setReadiness(lobbyReady.getIsReady());
-          clientRoom.updatePlayerStatus(handler.getClientId(), status);
-          logger.info("Client {} is ready in room {}", handler.getClientId(),
-                      clientRoom.getRoomName());
 
-          if (clientRoom.isReadyToStart()) {
-            var players = clientRoom.getPlayers().keySet().toArray();
-            if (players.length == 2) {
-              ClientSocket blackPlayer = clients.get(players[0]);
-              ClientSocket whitePlayer = clients.get(players[1]);
-              GameSession gameSession =
-                  new GameSession(blackPlayer, whitePlayer);
-              synchronized (activeGameSessions) {
-                activeGameSessions.put(clientRoom.getRoomName(), gameSession);
-              }
-              // Notify players that the game just started.
-              blackPlayer.sendMessage(new Message(new Message.Start('B')));
-              whitePlayer.sendMessage(new Message(new Message.Start('W')));
-              eventBus.post(new GameStateChange(gameSession));
-              logger.info("Game session started for room {}",
-                          clientRoom.getRoomName());
-              synchronized (lobbyRooms) {
-                lobbyRooms.remove(clientRoom.getRoomName());
-              }
+        room.addPlayer(new PlayerStatus(handler.getClientId()));
+        sendLobbyUpdate(null);
+        logger.info("Client {} joined room {}", handler.getClientId(), roomId);
+
+        if (room.isReadyToStart()) {
+          var players = room.getPlayers().keySet().toArray();
+          if (players.length == 2) {
+            ClientSocket blackPlayer = clients.get(players[0]);
+            ClientSocket whitePlayer = clients.get(players[1]);
+            GameSession gameSession = new GameSession(blackPlayer, whitePlayer);
+            synchronized (activeGameSessions) {
+              activeGameSessions.put(room.getRoomName(), gameSession);
             }
+            // Notify players that the game just started.
+            blackPlayer.sendMessage(new Message(new Message.Start('B')));
+            whitePlayer.sendMessage(new Message(new Message.Start('W')));
+            eventBus.post(new GameStateChange(gameSession));
+            logger.info("Game session started for room {}", room.getRoomName());
+            synchronized (lobbyRooms) { lobbyRooms.remove(room.getRoomName()); }
           }
         }
+
         break;
       }
       case Move: {

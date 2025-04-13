@@ -27,6 +27,8 @@ public class ClientMain implements EventListener<ServerMessage> {
   private LobbyView lobbyView;
   private GameView gameView;
 
+  private int status = 0;
+
   private void start() {
     SwingUtilities.invokeLater(() -> {
       frame = new JFrame();
@@ -58,6 +60,7 @@ public class ClientMain implements EventListener<ServerMessage> {
     switch (msg.getType()) {
     case Start:
       cardLayout.show(mainPanel, "game");
+      status = 1;
       Message.Start start = (Message.Start)msg.getMessage();
       gameView.setGame(game, Player.from(start.getColor()));
       break;
@@ -68,7 +71,14 @@ public class ClientMain implements EventListener<ServerMessage> {
       break;
     case Invalid:
       Message.Invalid invalid = (Message.Invalid)msg.getMessage();
-      gameView.showInvalidMove(invalid.getReason());
+      if (status == 1)
+        gameView.showInvalidMove(invalid.getReason());
+      else
+        lobbyView.showError(invalid.getReason());
+      break;
+    case LobbyUpdate:
+      Message.LobbyUpdate update = (Message.LobbyUpdate)msg.getMessage();
+      lobbyView.update(update.getLobbyRooms());
       break;
     default:
       break;

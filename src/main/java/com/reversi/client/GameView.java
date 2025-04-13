@@ -6,7 +6,6 @@ import com.reversi.common.ReversiGame;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.lang.ref.Reference;
 import javax.swing.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,12 +72,15 @@ public class GameView {
     SwingUtilities.invokeLater(() -> {
       // update board
       Board board = game.getBoard();
+
       for (int i = 0; i < 8; i++)
         for (int j = 0; j < 8; j++) {
           buttons[i][j].setText(switch (board.get(i, j)) {
             case Black -> "B";
             case White -> "W";
-            default -> "";
+            default ->
+              game.getCurrentPlayer() == us &&board.isValidMove(i, j, us) ? "."
+                                                                          : "";
           });
         }
 
