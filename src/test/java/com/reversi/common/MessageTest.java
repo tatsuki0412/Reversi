@@ -170,4 +170,19 @@ public class MessageTest {
     assertEquals("Room1", deserializedRooms.get("room1").getRoomName(),
                  "LobbyRoom name does not match");
   }
+
+  @Test
+  void testSerializeDeserializeGameOver() {
+    String reason = "time out";
+    var msg = new Message(new Message.GameOver(reason));
+
+    String json = assertDoesNotThrow(() -> serialize(msg));
+    assertNotNull(json);
+
+    Message deserialized = assertDoesNotThrow(() -> deserialize(json), json);
+    assertEquals(Message.Type.GameOver, deserialized.getType());
+    Message.GameOver gameoverDeserialized =
+        (Message.GameOver)deserialized.getMessage();
+    assertTrue(reason.equals(gameoverDeserialized.getReason()));
+  }
 }

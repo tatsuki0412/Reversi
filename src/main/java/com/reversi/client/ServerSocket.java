@@ -8,16 +8,16 @@ import java.net.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class GameController {
+public class ServerSocket {
   private static final Logger logger =
-      LoggerFactory.getLogger(GameController.class);
+      LoggerFactory.getLogger(ServerSocket.class);
 
   private EventBus eventBus;
   private Socket socket;
   private PrintWriter out;
   private BufferedReader in;
 
-  public GameController(EventBus eventBus) { this.eventBus = eventBus; }
+  public ServerSocket(EventBus eventBus) { this.eventBus = eventBus; }
 
   // Connect to the server (assumed to be running on localhost:5000)
   public void connectToServer() {

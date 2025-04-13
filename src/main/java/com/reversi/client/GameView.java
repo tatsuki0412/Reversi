@@ -23,10 +23,11 @@ public class GameView {
   private Player us;
 
   // Reference to the controller
-  private GameController controller;
+  private ServerSocket controller;
 
-  public GameView(ReversiGame game, Player us) {
-    setGame(game, us);
+  public GameView() {
+    this.game = new ReversiGame();
+    this.us = Player.None;
     initComponents();
   }
 
@@ -39,11 +40,13 @@ public class GameView {
         final int row = i, col = j;
         btn.addActionListener(new ActionListener() {
           public void actionPerformed(ActionEvent e) {
-            if (controller != null) {
-              controller.sendMove(row, col);
-            } else {
+            if (controller == null) {
               logger.error("Game controller not set.");
+              return;
             }
+
+            if (game.getCurrentPlayer() == us && game.isValidMove(row, col))
+              controller.sendMove(row, col);
           }
         });
         buttons[i][j] = btn;
@@ -57,18 +60,16 @@ public class GameView {
 
   public JPanel getGamePanel() { return gamePanel; }
 
-  public void setController(GameController c) { controller = c; }
-  public void setGame(ReversiGame game, Player us) {
-    this.game = game;
-    this.us = us;
-  }
+  public void setController(ServerSocket c) { controller = c; }
+
   public void setUs(Player p) {
     this.us = p;
     SwingUtilities.invokeLater(
         () -> { statusLabel.setText("You are " + this.us.toString()); });
   }
 
-  public void update() {
+  public void update(ReversiGame game) {
+    this.game = game;
     SwingUtilities.invokeLater(() -> {
       // update board
       Board board = game.getBoard();
@@ -97,6 +98,14 @@ public class GameView {
     SwingUtilities.invokeLater(() -> {
       JOptionPane.showMessageDialog(gamePanel, displayMessage, "Error",
                                     JOptionPane.ERROR_MESSAGE);
+    });
+  }
+
+  public void showGameOver(String message) {
+    SwingUtilities.invokeLater(() -> {
+      JOptionPane.showMessageDialog(gamePanel, message, "Game Over",
+                                    JOptionPane.INFORMATION_MESSAGE);
+      statusLabel.setText("Game Over: " + message);
     });
   }
 }

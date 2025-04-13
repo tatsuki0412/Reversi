@@ -16,7 +16,7 @@ public class LobbyView {
   private JButton joinButton;
   private JButton createButton;
   private JLabel lobbyStatusLabel;
-  private GameController controller;
+  private ServerSocket controller;
   private JPanel playersPanel;
 
   public LobbyView() {
@@ -86,7 +86,7 @@ public class LobbyView {
     lobbyStatusLabel.setText("Joining room: " + roomId + " ...");
   }
 
-  public void setController(GameController controller) {
+  public void setController(ServerSocket controller) {
     this.controller = controller;
   }
 

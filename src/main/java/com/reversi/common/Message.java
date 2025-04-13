@@ -76,6 +76,15 @@ public class Message {
     public char getColor() { return color; }
   }
 
+  public static class GameOver {
+    private final String reason;
+    @JsonCreator
+    public GameOver(@JsonProperty("reason") String reason) {
+      this.reason = reason;
+    }
+    public String getReason() { return reason; }
+  }
+
   public static class GameUpdate {
     private final ReversiGame game;
     @JsonCreator
@@ -102,6 +111,7 @@ public class Message {
     Move,
     Invalid,
     Start,
+    GameOver,
     Turn,
     Board,
     LobbyJoin,
@@ -143,6 +153,10 @@ public class Message {
   public Message(LobbyUpdate msg) {
     this.msg = msg;
     this.type = Type.LobbyUpdate;
+  }
+  public Message(GameOver msg) {
+    this.msg = msg;
+    this.type = Type.GameOver;
   }
 
   // No-arg constructor for Jackson
@@ -199,6 +213,10 @@ public class Message {
       case Start:
         Start start = mapper.treeToValue(msgNode, Start.class);
         return new Message(start);
+
+      case GameOver:
+        GameOver gameOver = mapper.treeToValue(msgNode, GameOver.class);
+        return new Message(gameOver);
 
       case LobbyJoin:
         LobbyJoin lobbyJoin = mapper.treeToValue(msgNode, LobbyJoin.class);
