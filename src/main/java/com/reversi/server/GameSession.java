@@ -1,38 +1,39 @@
 package com.reversi.server;
 
+import com.reversi.common.EventBus;
+import com.reversi.common.EventListener;
+import com.reversi.common.FischerClock;
 import com.reversi.common.Message;
 import com.reversi.common.Player;
+import com.reversi.common.Ticker;
 import com.reversi.common.ReversiGame;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class GameSession {
   private ReversiGame game;
   private ClientSocket blackPlayer;
   private ClientSocket whitePlayer;
-
-  private Timer turnTimer;
-  private static final long TURN_TIME = 60000; // 1min timer
   private boolean gameOver = false;
+
+  private FischerClock clock;
 
   public GameSession(ClientSocket black, ClientSocket white) {
     this.game = new ReversiGame();
     this.blackPlayer = black;
     this.whitePlayer = white;
-    startTurnTimer();
-  }
 
-  private synchronized void startTurnTimer() {
-    if (turnTimer != null) {
-      turnTimer.cancel();
-    }
-    turnTimer = new Timer();
-    turnTimer.schedule(new TimerTask() {
-      @Override
-      public void run() {
-        onTimeout();
-      }
-    }, TURN_TIME);
+    this.clock = new FischerClock(100000, 1000, false);
+    var eventBus = new EventBus();
+    eventBus.register(FischerClock.TimeoutEvent.class,
+                      new EventListener<FischerClock.TimeoutEvent>() {
+                        @Override
+                        public void onEvent(FischerClock.TimeoutEvent e) {
+                          onTimeout();
+                        }
+                      });
+    this.clock.setEventBus(eventBus);
+    this.clock.setTicker(new Ticker());
+
+    this.clock.start();
   }
 
   private synchronized void onTimeout() {
@@ -79,13 +80,8 @@ public class GameSession {
       return false;
 
     boolean moveMade = game.makeMove(row, col);
-    if (moveMade) {
-      if (turnTimer != null) {
-        turnTimer.cancel();
-      }
-      // Start timer for the opponent’s turn.
-      startTurnTimer();
-    }
+    if (moveMade)
+      clock.swap();
     return moveMade;
   }
 
