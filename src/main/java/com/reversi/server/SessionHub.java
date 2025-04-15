@@ -2,6 +2,7 @@ package com.reversi.server;
 
 import com.reversi.common.EventBus;
 import com.reversi.common.EventListener;
+import com.reversi.common.FischerClock;
 import com.reversi.common.LobbyRoom;
 import com.reversi.common.Message;
 import com.reversi.common.PlayerStatus;
@@ -156,11 +157,14 @@ public class SessionHub {
 
   class GameSessionUpdateListener implements EventListener<GameStateChange> {
     @Override
+
     public void onEvent(GameStateChange e) {
       GameSession session = e.getSession();
       ReversiGame game = session.getGame();
+      FischerClock clock = session.getClock();
 
-      var gameUpd = new Message.GameUpdate(game);
+      var gameUpd = new Message.GameUpdate(game, clock.getBlackTimeMillis(),
+                                           clock.getWhiteTimeMillis());
       var message = new Message(gameUpd);
       ClientSocket blackPlayer;
       ClientSocket whitePlayer;

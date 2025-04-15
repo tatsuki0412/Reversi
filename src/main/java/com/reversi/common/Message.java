@@ -87,11 +87,18 @@ public class Message {
 
   public static class GameUpdate {
     private final ReversiGame game;
+    private final long blackTimeMs, whiteTimeMs;
     @JsonCreator
-    public GameUpdate(@JsonProperty("game") ReversiGame game) {
+    public GameUpdate(@JsonProperty("game") ReversiGame game,
+                      @JsonProperty("blackTimeMs") long blackTimeMs,
+                      @JsonProperty("whiteTimeMs") long whiteTimeMs) {
       this.game = game;
+      this.blackTimeMs = blackTimeMs;
+      this.whiteTimeMs = whiteTimeMs;
     }
     public ReversiGame getGame() { return game; }
+    public long getBlackTimeMs() { return blackTimeMs; }
+    public long getWhiteTimeMs() { return whiteTimeMs; }
   }
 
   public static class LobbyUpdate {

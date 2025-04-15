@@ -5,8 +5,8 @@ import com.reversi.common.EventListener;
 import com.reversi.common.FischerClock;
 import com.reversi.common.Message;
 import com.reversi.common.Player;
-import com.reversi.common.Ticker;
 import com.reversi.common.ReversiGame;
+import com.reversi.common.Ticker;
 
 public class GameSession {
   private ReversiGame game;
@@ -94,4 +94,5 @@ public class GameSession {
   }
 
   public ReversiGame getGame() { return game; }
+  public FischerClock getClock() { return clock; }
 }

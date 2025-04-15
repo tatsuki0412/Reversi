@@ -1,0 +1,60 @@
+
+/* Overall background */
+.root {
+    -fx-font-family: "Segoe UI", sans-serif;
+    -fx-background-color: #f0f2f5;
+}
+
+/* Status label at the top */
+.status-label {
+    -fx-font-size: 16px;
+    -fx-text-fill: #333333;
+    -fx-padding: 10px;
+}
+
+/* Left pane styling */
+.left-pane {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #dcdcdc;
+    -fx-border-width: 1px;
+}
+
+/* Rooms list styling */
+.rooms-list {
+    -fx-background-color: #f9f9f9;
+    -fx-border-color: #cccccc;
+}
+
+/* Board grid styling */
+.board-grid {
+    -fx-hgap: 5px;
+    -fx-vgap: 5px;
+    -fx-padding: 10px;
+}
+
+/* Individual board buttons */
+.board-button {
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+.board-button:hover {
+    -fx-background-color: #45a049;
+}
+
+/* Game pane */
+.game-pane {
+    -fx-background-color: #f0f2f5;
+}
+
+/* Game status label */
+.game-status {
+    -fx-font-size: 18px;
+    -fx-padding: 15px;
+    -fx-text-fill: #222222;
+    -fx-background-color: #e8e8e8;
+    -fx-border-color: #dcdcdc;
+    -fx-border-width: 0 0 1px 0;
+}

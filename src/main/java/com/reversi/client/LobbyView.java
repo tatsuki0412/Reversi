@@ -2,113 +2,130 @@ package com.reversi.client;
 
 import com.reversi.common.LobbyRoom;
 import com.reversi.common.Message;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.Map;
-import javax.swing.*;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.*;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.*;
 
 public class LobbyView {
-  private JPanel lobbyPanel;
-  private JTextField roomNameField;
-  private JButton joinButton;
-  private JButton createButton;
-  private JLabel lobbyStatusLabel;
-  private ServerSocket controller;
-  private JPanel playersPanel;
+
+  private BorderPane mainPane;
+  private TextField roomNameField;
+  private Button joinButton;
+  private Button createButton;
+  private Label lobbyStatusLabel;
+  private ListView<String> roomsListView;
+
+  private ServerSocket serverSocket;
 
   public LobbyView() {
-    // Build Lobby Panel
-    lobbyPanel = new JPanel(new GridBagLayout());
-    GridBagConstraints gbc = new GridBagConstraints();
-    gbc.insets = new Insets(5, 5, 5, 5);
+    createComponents();
+    layoutComponents();
+    attachListeners();
+    this.serverSocket = null;
+  }
 
-    playersPanel = new JPanel();
-    playersPanel.setLayout(new BoxLayout(playersPanel, BoxLayout.Y_AXIS));
-    JScrollPane scrollPane = new JScrollPane(playersPanel);
-    scrollPane.setPreferredSize(new Dimension(300, 400));
-    gbc.gridx = 0;
-    gbc.gridy = 0;
-    gbc.gridheight = 2;
-    lobbyPanel.add(scrollPane, gbc);
+  public void setServerSocket(ServerSocket serverSocket) {
+    this.serverSocket = serverSocket;
+  }
 
-    gbc.gridx = 1;
-    gbc.gridy = 0;
-    lobbyPanel.add(new JLabel("Enter Room Number:"), gbc);
+  private void createComponents() {
+    // Top status label.
+    lobbyStatusLabel = new Label("Not connected to any room");
+    lobbyStatusLabel.getStyleClass().add("status-label");
 
-    roomNameField = new JTextField(10);
-    gbc.gridx = 2;
-    lobbyPanel.add(roomNameField, gbc);
+    // Create room input field and buttons.
+    roomNameField = new TextField();
+    roomNameField.setPromptText("Enter Room Number");
 
-    joinButton = new JButton("Join Room");
-    gbc.gridx = 1;
-    gbc.gridy = 2;
-    lobbyPanel.add(joinButton, gbc);
+    joinButton = new Button("Join Room");
+    createButton = new Button("Create Room");
 
-    createButton = new JButton("Create");
-    gbc.gridx = 2;
-    lobbyPanel.add(createButton, gbc);
+    // List view for available rooms.
+    roomsListView = new ListView<>();
+    roomsListView.getStyleClass().add("rooms-list");
+  }
 
-    lobbyStatusLabel = new JLabel("Not connected to any room");
-    gbc.gridx = 1;
-    gbc.gridy = 4;
-    gbc.gridwidth = 2;
-    lobbyPanel.add(lobbyStatusLabel, gbc);
+  private void layoutComponents() {
+    mainPane = new BorderPane();
+    mainPane.setPadding(new Insets(10));
 
-    // Button actions
-    joinButton.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        String roomId = roomNameField.getText().trim();
-        if (!roomId.isEmpty()) {
-          joinRoom(roomId);
-        } else {
-          lobbyStatusLabel.setText("Please enter a valid room ID");
-        }
+    // Left side: rooms list.
+    VBox leftBox = new VBox(10, new Label("Available Rooms:"), roomsListView);
+    leftBox.setPadding(new Insets(10));
+    leftBox.getStyleClass().add("left-pane");
+    mainPane.setLeft(leftBox);
+
+    // Center: form to join or create a room.
+    GridPane centerGrid = new GridPane();
+    centerGrid.setAlignment(Pos.CENTER);
+    centerGrid.setHgap(10);
+    centerGrid.setVgap(10);
+    centerGrid.add(new Label("Room:"), 0, 0);
+    centerGrid.add(roomNameField, 1, 0);
+    centerGrid.add(joinButton, 0, 1);
+    centerGrid.add(createButton, 1, 1);
+    mainPane.setCenter(centerGrid);
+
+    // Top: status label.
+    HBox topBox = new HBox(lobbyStatusLabel);
+    topBox.setAlignment(Pos.CENTER);
+    topBox.setPadding(new Insets(10));
+    mainPane.setTop(topBox);
+  }
+
+  private void attachListeners() {
+    // Handle join room via button.
+    joinButton.setOnAction(e -> {
+      String roomId = roomNameField.getText().trim();
+      if (!roomId.isEmpty()) {
+        joinRoom(roomId);
+      } else {
+        lobbyStatusLabel.setText("Please enter a valid room ID");
       }
     });
 
-    createButton.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        var message = new Message.LobbyCreate(new LobbyRoom(
-            roomNameField.getText().trim())); // TODO: add room config support
-        controller.send(new Message(message));
-        lobbyStatusLabel.setText("Waiting for opponent...");
+    // Handle create room button.
+    createButton.setOnAction(e -> {
+      String roomId = roomNameField.getText().trim();
+      if (!roomId.isEmpty()) {
+        createRoom(roomId);
+      } else {
+        lobbyStatusLabel.setText("Room ID cannot be empty.");
+      }
+    });
+
+    // Enable joining via double click on a room in the list.
+    roomsListView.addEventFilter(MouseEvent.MOUSE_CLICKED, event -> {
+      if (event.getClickCount() == 2) {
+        String selectedRoom =
+            roomsListView.getSelectionModel().getSelectedItem();
+        if (selectedRoom != null) {
+          joinRoom(selectedRoom);
+        }
       }
     });
   }
 
   private void joinRoom(String roomId) {
-    controller.send(new Message(new Message.LobbyJoin(roomId)));
+    serverSocket.send(new Message(new Message.LobbyJoin(roomId)));
     lobbyStatusLabel.setText("Joining room: " + roomId + " ...");
   }
 
-  public void setController(ServerSocket controller) {
-    this.controller = controller;
+  private void createRoom(String roomId) {
+    // TODO: add room config support
+    var message = new Message(new Message.LobbyCreate(new LobbyRoom(roomId)));
+    serverSocket.send(message);
+    lobbyStatusLabel.setText("Creating room: " + roomId +
+                             ", waiting players to join ...");
   }
 
-  public JPanel getMainPanel() { return lobbyPanel; }
-
-  public void showError(String what) {
-    SwingUtilities.invokeLater(() -> lobbyStatusLabel.setText(what));
-  }
+  public BorderPane getMainPane() { return mainPane; }
 
   public void update(Map<String, LobbyRoom> lobbyRooms) {
-    SwingUtilities.invokeLater(() -> {
-      playersPanel.removeAll();
-      for (var entry : lobbyRooms.keySet()) {
-        JLabel lbl = new JLabel(entry);
-        lbl.addMouseListener(new MouseAdapter() {
-          public void mouseClicked(MouseEvent e) { joinRoom(lbl.getText()); }
-        });
-        playersPanel.add(lbl);
-      }
-
-      playersPanel.revalidate();
-      playersPanel.repaint();
-    });
+    roomsListView.getItems().clear();
+    roomsListView.getItems().addAll(lobbyRooms.keySet());
   }
 }

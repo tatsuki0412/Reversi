@@ -110,7 +110,7 @@ public class MessageTest {
   void testSerializeDeserializeGameUpdate() {
     var game = new ReversiGame();
 
-    Message.GameUpdate gameUpdate = new Message.GameUpdate(game);
+    Message.GameUpdate gameUpdate = new Message.GameUpdate(game, 100, 200);
     Message msg = new Message(gameUpdate);
 
     String json = assertDoesNotThrow(() -> serialize(msg));
@@ -123,6 +123,8 @@ public class MessageTest {
     Message.GameUpdate deserializedMessage =
         (Message.GameUpdate)deserialized.getMessage();
     assertTrue(game.equals(deserializedMessage.getGame()));
+    assertEquals(100, deserializedMessage.getBlackTimeMs());
+    assertEquals(200, deserializedMessage.getWhiteTimeMs());
   }
 
   @Test
