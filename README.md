@@ -25,7 +25,7 @@ mvn exec:java -Dexec.mainClass=com.reversi.server.ServerMain
 In two separate terminal windows, run:
 
 ```bash
-mvn exec:java -Dexec.mainClass=com.reversi.client.ClientMain
+mvn exec:java -Dexec.mainClass=com.reversi.client.ReversiApp
 ```
 
 ## Run unit tests:
